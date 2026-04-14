@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-# This resolves the Node.js 20 warning and prepares for the 2026 deadline
+# This resolves the Node.js 20 warning for the 2026 deadline
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -20,13 +20,13 @@ jobs:
 
       - name: Push to Azure DevOps
         run: |
-          # 1. Remove existing 'azure' remote to prevent 'remote already exists' errors
+          # 1. Clean up the remote to prevent 'already exists' errors
           git remote remove azure || true
 
           # 2. Add the correct Azure DevOps remote
           git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/infra-epicbook/_git/infra-epicbook
 
-          # 3. Force push the main branch to the Azure repository
+          # 3. Force push to the Azure repository
           git push azure main --force
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
