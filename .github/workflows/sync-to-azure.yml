@@ -20,15 +20,15 @@ jobs:
 
       - name: Push to Azure DevOps
         run: |
-          # 1. Clean up existing remotes
+          # 1. Clean up existing remotes to prevent conflicts
           git remote remove azure || true
 
-          # 2. Add the correct URL for the 'epicbook-dual-pipeline' project
+          # 2. Add the CORRECT URL (Project: epicbook-dual-pipeline | Repo: infra-epicbook)
           git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/epicbook-dual-pipeline/_git/infra-epicbook
 
-          # 3. Push to Azure
+          # 3. Force push the main branch
           git push azure main --force
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
 
-# Forced update to fix Azure project path
+# Updated project path to epicbook-dual-pipeline
