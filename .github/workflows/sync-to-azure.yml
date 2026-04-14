@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-# Resolves Node.js 20 warning for 2026 deadline
+# Resolves Node.js warning and ensures 2026 compatibility
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -20,10 +20,10 @@ jobs:
 
       - name: Push to Azure DevOps
         run: |
-          # 1. Clean up the remote
+          # 1. Clean up existing remotes
           git remote remove azure || true
 
-          # 2. Add the correct URL with the project: epicbook-dual-pipeline
+          # 2. Add the correct URL for the 'epicbook-dual-pipeline' project
           git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/epicbook-dual-pipeline/_git/infra-epicbook
 
           # 3. Push to Azure
@@ -31,4 +31,4 @@ jobs:
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
 
-# Updated project name to epicbook-dual-pipeline
+# Forced update to fix Azure project path
