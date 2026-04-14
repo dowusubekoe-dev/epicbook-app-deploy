@@ -1,11 +1,13 @@
 name: Sync to Azure Repo
+
 on:
   push:
     branches:
       - main
 
+# This clears the Node.js 20 deprecation warning for the 2026 deadline
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Resolves the deprecation warning
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   sync:
@@ -18,22 +20,13 @@ jobs:
 
       - name: Push to Azure DevOps
         run: |
+          # 1. Clean up any existing remote named 'azure'
+          git remote remove azure || true
+
+          # 2. Add the correct Azure DevOps remote
           git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/infra-epicbook/_git/infra-epicbook
+
+          # 3. Force push to the Azure repository
           git push azure main --force
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
-
-jobs:
-  sync:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Push to Azure DevOps
-        run: |
-          # Use the project name exactly as it appears in your Azure DevOps URL
-          git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/infra-epicbook/_git/infra-epicbook
-          git push azure main --force
