@@ -4,6 +4,9 @@ on:
     branches:
       - main
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # Resolves the deprecation warning
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -15,6 +18,22 @@ jobs:
 
       - name: Push to Azure DevOps
         run: |
-          # Use the secret you just created for authentication
-          git remote add azure https://${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/epicbook-dual-pipeline/_git/infra-epicbook
+          git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/infra-epicbook/_git/infra-epicbook
+          git push azure main --force
+        env:
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to Azure DevOps
+        run: |
+          # Use the project name exactly as it appears in your Azure DevOps URL
+          git remote add azure https://x-token-auth:${{ secrets.AZURE_DEVOPS_PAT }}@dev.azure.com/derekobekoe/infra-epicbook/_git/infra-epicbook
           git push azure main --force
