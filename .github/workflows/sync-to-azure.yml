@@ -5,7 +5,7 @@ on:
     branches:
       - main
 
-# This resolves the Node.js 20 warning for the 2026 deadline
+# This clears the Node.js warning and ensures compatibility for 2026
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
