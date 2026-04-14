@@ -4,14 +4,14 @@ trigger:
       - main
 
 pool:
-  name: 'SelfHostedPool'
+  name: 'epicbook-deploy-agent'
 
 variables:
   - group: epicbook-secrets
   - name: terraformVersion
     value: '1.8.5'
   - name: azureServiceConnection
-    value: 'azure-devops-connection'
+    value: 'epicbook-devops-sb'
 
 steps:
   - checkout: self
