@@ -1,134 +1,92 @@
-trigger:
-  branches:
-    include:
-      - main
+trigger: none
 
-pool:
-  name: 'epicbook-deploy-agent'
+resources:
+  pipelines:
+    - pipeline: epicbook-dual-pipeline
+      source: infra-epicbook.git
+      trigger: true
 
 variables:
   - group: epicbook-secrets
       vmPublicIp=4.210.183.39
       db_host=epicbook-mysql-0qrmvo.mysql.database.azure.com
-  - name: terraformVersion
-    value: '1.8.5'
-  - name: azureServiceConnection
-    value: 'epicbook-devops-sb'
+
+pool:
+  name: 'epicbook-deploy-agent'
 
 steps:
   - checkout: self
     displayName: 'Checkout repository'
 
-  - task: DownloadSecureFile@1
-    name: sshPublicKey
-    displayName: 'Download SSH public key'
-    inputs:
-      secureFile: 'azure_vm_key.pub'
-
-  - script: |
-      sudo apt-get update
-      sudo apt-get install -y unzip curl
-    displayName: 'Install required packages'
+  - download: infra
+    artifact: infra-outputs
+    displayName: 'Download infra outputs artifact'
 
   - script: |
       set -e
-      echo "Installing Terraform $(terraformVersion)..."
-      curl -Lo terraform.zip https://releases.hashicorp.com/terraform/$(terraformVersion)/terraform_$(terraformVersion)_linux_amd64.zip
-      unzip -o terraform.zip
-      sudo mv terraform /usr/local/bin/
-      terraform version
-    displayName: 'Install Terraform'
+
+      echo "Downloaded artifact contents:"
+      ls -R "$(Pipeline.Workspace)"
+
+      source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
+
+      echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
+      echo "##vso[task.setvariable variable=db_host]$db_host"
+
+      echo "VM IP: $vmPublicIp"
+      echo "DB Host: $db_host"
+    displayName: 'Load infra outputs'
+
+  - task: DownloadSecureFile@1
+    name: sshPrivateKey
+    displayName: 'Download SSH private key'
+    inputs:
+      secureFile: 'id_rsa'
+
+  - script: |
+      sudo apt-get update
+      sudo apt-get install -y ansible sshpass
+    displayName: 'Install Ansible'
 
   - script: |
       mkdir -p ~/.ssh
-      cp "$(sshPublicKey.secureFilePath)" ~/.ssh/azure_vm_key.pub
-      chmod 644 ~/.ssh/azure_vm_key.pub
+      cp "$(sshPrivateKey.secureFilePath)" ~/.ssh/azure_vm_key
+      chmod 600 ~/.ssh/azure_vm_key
       ls -l ~/.ssh
-    displayName: 'Prepare SSH Public Key'
-
-  - task: AzureCLI@2
-    displayName: 'Terraform Init'
-    inputs:
-      azureSubscription: '$(azureServiceConnection)'
-      addSpnToEnvironment: true
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        set -e
-        export ARM_CLIENT_ID="$servicePrincipalId"
-        export ARM_CLIENT_SECRET="$servicePrincipalKey"
-        export ARM_TENANT_ID="$tenantId"
-        export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        export TF_VAR_db_password="$(db_password)"
-
-        terraform -chdir="$(Build.SourcesDirectory)" init -reconfigure
-
-  - task: AzureCLI@2
-    displayName: 'Terraform Plan'
-    inputs:
-      azureSubscription: '$(azureServiceConnection)'
-      addSpnToEnvironment: true
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        set -e
-        export ARM_CLIENT_ID="$servicePrincipalId"
-        export ARM_CLIENT_SECRET="$servicePrincipalKey"
-        export ARM_TENANT_ID="$tenantId"
-        export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        export TF_VAR_db_password="$(db_password)"
-
-        terraform -chdir="$(Build.SourcesDirectory)" plan -out=tfplan
-
-  - task: AzureCLI@2
-    displayName: 'Terraform Apply'
-    inputs:
-      azureSubscription: '$(azureServiceConnection)'
-      addSpnToEnvironment: true
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        set -e
-        export ARM_CLIENT_ID="$servicePrincipalId"
-        export ARM_CLIENT_SECRET="$servicePrincipalKey"
-        export ARM_TENANT_ID="$tenantId"
-        export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        export TF_VAR_db_password="$(db_password)"
-
-        terraform -chdir="$(Build.SourcesDirectory)" apply -auto-approve tfplan
-
-  - task: AzureCLI@2
-    displayName: 'Write Terraform outputs to artifact file'
-    inputs:
-      azureSubscription: '$(azureServiceConnection)'
-      addSpnToEnvironment: true
-      scriptType: 'bash'
-      scriptLocation: 'inlineScript'
-      inlineScript: |
-        set -e
-        export ARM_CLIENT_ID="$servicePrincipalId"
-        export ARM_CLIENT_SECRET="$servicePrincipalKey"
-        export ARM_TENANT_ID="$tenantId"
-        export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-        export TF_VAR_db_password="$(db_password)"
-
-        PUBLIC_IP=$(terraform -chdir="$(Build.SourcesDirectory)" output -raw public_ip)
-        DB_HOST=$(terraform -chdir="$(Build.SourcesDirectory)" output -raw db_host)
-
-        mkdir -p "$(Build.ArtifactStagingDirectory)"
-
-        cat > "$(Build.ArtifactStagingDirectory)/infra-outputs.env" <<EOF
-        vmPublicIp=$PUBLIC_IP
-        db_host=$DB_HOST
-        EOF
-
-        echo "Generated infra-outputs.env:"
-        cat "$(Build.ArtifactStagingDirectory)/infra-outputs.env"
-
-  - publish: $(Build.ArtifactStagingDirectory)/infra-outputs.env
-    artifact: infra-outputs
-    displayName: 'Publish infra outputs artifact'
+    displayName: 'Prepare SSH private key'
 
   - script: |
-      echo "Terraform deployment completed."
-    displayName: 'Finish Infra Pipeline'
+      cat > inventory.ini <<EOF
+      [web]
+      $(vmPublicIp)
+
+      [web:vars]
+      ansible_user=azureuser
+      ansible_connection=ssh
+      ansible_ssh_private_key_file=$HOME/.ssh/azure_vm_key
+      ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+      ansible_python_interpreter=/usr/bin/python3
+      EOF
+
+      echo "Generated inventory:"
+      cat inventory.ini
+    displayName: 'Generate inventory.ini'
+
+  - script: |
+      ansible all -m ping
+    displayName: 'Test Ansible connectivity'
+
+  - script: |
+      ansible-playbook site.yml \
+        -e "db_host=$(db_host)" \
+        -e "db_password=$(db_password)"
+    displayName: 'Run Ansible playbook'
+
+  - script: |
+      set -e
+      echo "========================================="
+      echo "App URL: http://$(vmPublicIp)"
+      echo "========================================="
+      curl -I --max-time 20 http://$(vmPublicIp)
+      curl --max-time 20 http://$(vmPublicIp) | head
+    displayName: 'Verify deployment Url and Nginx'
