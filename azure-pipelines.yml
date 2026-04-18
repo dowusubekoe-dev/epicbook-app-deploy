@@ -56,11 +56,15 @@ steps:
     displayName: 'Wait for apt lock'
 
   - script: |
-      echo "PWD:"
+      echo "=== WORKSPACE ROOT ==="
       pwd
-      echo "==== FULL WORKSPACE ===="
+
+      echo "=== FULL TREE ==="
       ls -R $(Build.SourcesDirectory)
-    displayName: 'Debug repo structure'
+
+      echo "=== ROLES DIR CHECK ==="
+      ls -R $(Build.SourcesDirectory)/roles || echo "NO ROLES DIRECTORY FOUND"
+    displayName: 'Debug roles visibility'
 
   - script: |
       set -e
