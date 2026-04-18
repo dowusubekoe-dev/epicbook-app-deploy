@@ -56,6 +56,13 @@ steps:
     displayName: 'Wait for apt lock'
 
   - script: |
+      echo "PWD:"
+      pwd
+      echo "==== FULL WORKSPACE ===="
+      ls -R $(Build.SourcesDirectory)
+    displayName: 'Debug repo structure'
+
+  - script: |
       set -e
       sudo dpkg --configure -a || true
       sudo apt-get clean
