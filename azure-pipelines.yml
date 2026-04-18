@@ -2,14 +2,16 @@ trigger: none
 
 resources:
   pipelines:
-    - pipeline: epicbook-dual-pipeline
+    - pipeline: infra
       source: infra-epicbook.git
       trigger: true
 
 variables:
   - group: epicbook-secrets
-      vmPublicIp=4.210.183.39
-      db_host=epicbook-mysql-0qrmvo.mysql.database.azure.com
+  - name: vmPublicIp
+    value: '4.210.183.39'
+  - name: db_host
+    value: 'epicbook-mysql-0qrmvo.mysql.database.azure.com'
 
 pool:
   name: 'epicbook-deploy-agent'
@@ -41,7 +43,7 @@ steps:
     name: sshPrivateKey
     displayName: 'Download SSH private key'
     inputs:
-      secureFile: 'id_rsa'
+      secureFile: 'azure_vm_key'
 
   - script: |
       sudo apt-get update
@@ -76,7 +78,12 @@ steps:
       ansible all -m ping
     displayName: 'Test Ansible connectivity'
 
-  - script: |
+  - name: RunAnsiblePlaybook
+    env:
+      db_host: $(db_host)
+      db_password: $(db_password)
+
+    script: |
       ansible-playbook site.yml \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
