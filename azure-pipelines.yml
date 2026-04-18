@@ -46,12 +46,21 @@ steps:
       secureFile: 'azure_vm_key'
 
   - script: |
+      echo "Waiting for apt lock to be released..."
+      while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+        echo "APT is locked, waiting..."
+        sleep 5
+      done
+
+      echo "Lock released"
+    displayName: 'Wait for apt lock'
+
+  - script: |
       set -e
       sudo dpkg --configure -a || true
       sudo apt-get clean
       sudo apt-get update -y
       sudo apt-get install -y ansible sshpass --no-install-recommends
-      sudo apt-get remove -y man-db || true
     displayName: 'Install Ansible'
 
   - script: |
