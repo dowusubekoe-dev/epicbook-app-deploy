@@ -78,12 +78,7 @@ steps:
       ansible all -m ping
     displayName: 'Test Ansible connectivity'
 
-  - name: RunAnsiblePlaybook
-    env:
-      db_host: $(db_host)
-      db_password: $(db_password)
-
-    script: |
+  - script: |
       ansible-playbook site.yml \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
