@@ -46,8 +46,12 @@ steps:
       secureFile: 'azure_vm_key'
 
   - script: |
-      sudo apt-get update
-      sudo apt-get install -y ansible sshpass
+      set -e
+      sudo dpkg --configure -a || true
+      sudo apt-get clean
+      sudo apt-get update -y
+      sudo apt-get install -y ansible sshpass --no-install-recommends
+      sudo apt-get remove -y man-db || true
     displayName: 'Install Ansible'
 
   - script: |
