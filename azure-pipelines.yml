@@ -8,6 +8,8 @@ pool:
 
 variables:
   - group: epicbook-secrets
+      vmPublicIp=4.210.183.39
+      db_host=epicbook-mysql-0qrmvo.mysql.database.azure.com
   - name: terraformVersion
     value: '1.8.5'
   - name: azureServiceConnection
@@ -21,7 +23,7 @@ steps:
     name: sshPublicKey
     displayName: 'Download SSH public key'
     inputs:
-      secureFile: 'id_rsa.pub'
+      secureFile: 'azure_vm_key.pub'
 
   - script: |
       sudo apt-get update
@@ -39,8 +41,8 @@ steps:
 
   - script: |
       mkdir -p ~/.ssh
-      cp "$(sshPublicKey.secureFilePath)" ~/.ssh/id_rsa.pub
-      chmod 644 ~/.ssh/id_rsa.pub
+      cp "$(sshPublicKey.secureFilePath)" ~/.ssh/azure_vm_key.pub
+      chmod 644 ~/.ssh/azure_vm_key.pub
       ls -l ~/.ssh
     displayName: 'Prepare SSH Public Key'
 
