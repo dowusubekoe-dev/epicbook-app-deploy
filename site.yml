@@ -2,6 +2,14 @@
 - name: Prepare system (common)
   hosts: web
   become: true
+  vars:
+    app_dest: /opt/epicbook
+  roles:
+    - common
+    
+- name: Prepare system (common)
+  hosts: web
+  become: true
   roles:
     - common
 
