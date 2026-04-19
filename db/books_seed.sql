@@ -1,16 +1,16 @@
 -- Use JAWS_DB
-USE bookstore;
+USE epicbookdb;
 
 /**
 on your local machine, use the following:
-USE bookstore_db;
+USE epicbookdb_db;
 **/
 
 -- Insert Books into Book Table
-INSERT INTO Book(title,genre,pubYear,price,inventory,bookDescription,createdAt,updatedAt,AuthorId) 
+INSERT INTO Book(title,genre,pubYear,price,inventory,bookDescription,createdAt,updatedAt,AuthorId)
 
 -- Values are || Title | Genre | Published Year | Price | Inventory | Description | Created DtTm | Updated DtTm | Author ID ||
-VALUES 
+VALUES
  ('28 Summers','NYT',2020,'28',4,'A relationship that started in 1993 between Mallory Blessing and Jake McCloud comes to light while she is on her deathbed and his wife runs for president.',sysdate(),sysdate(),1)
 ,('The Vanishing Half','NYT',2020,'27',8,'The lives of twin sisters who run away from a Southern Black community at age 16 diverge as one returns and the other takes on a different racial identity but their fates intertwine.',sysdate(),sysdate(),2)
 ,('The Room Where it Happened','NYT',2020,'32.50',7,'The former national security advisor gives his account of the 17 months he spent working for President Trump.',sysdate(),sysdate(),3)

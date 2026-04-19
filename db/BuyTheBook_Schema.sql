@@ -1,18 +1,18 @@
 /**
-On your local machine, replace 'bookstore' with 'bookstore_db'
+On your local machine, replace 'epicbookdb' with 'epicbookdb_db'
 **/
 
 -- Use JAWS_DB Database
 
 -- Create Table Author on DB
--- CREATE TABLE `bookstore`.`Author` (
+-- CREATE TABLE `epicbookdb`.`Author` (
 --   `id` INT NOT NULL AUTO_INCREMENT,
 --   `firstName` VARCHAR(45) NOT NULL,
 --   `lastName` VARCHAR(45) NOT NULL,
 --   PRIMARY KEY (`id`));
 
 -- Create Table Author on DB
-CREATE TABLE `bookstore`.`Author` (
+CREATE TABLE `epicbookdb`.`Author` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `firstName` VARCHAR(45) NOT NULL,
   `lastName` VARCHAR(45) NOT NULL,
@@ -21,7 +21,7 @@ CREATE TABLE `bookstore`.`Author` (
   PRIMARY KEY (`id`));
 
 -- Create Table Book after Author because of FK constraint to Author Tbl
-CREATE TABLE `bookstore`.`Book` (
+CREATE TABLE `epicbookdb`.`Book` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `title` VARCHAR(255) NOT NULL,
   `genre` VARCHAR(255) NOT NULL,
@@ -36,14 +36,14 @@ CREATE TABLE `bookstore`.`Book` (
   INDEX `AuthorId_idx` (`AuthorId` ASC),
   CONSTRAINT `AuthorId`
     FOREIGN KEY (`AuthorId`)
-    REFERENCES `bookstore`.`Author` (`id`)
+    REFERENCES `epicbookdb`.`Author` (`id`)
     ON DELETE NO ACTION
     ON UPDATE NO ACTION);
 
 
 
 -- Create Table Cart
-CREATE TABLE `bookstore`.`Cart` (
+CREATE TABLE `epicbookdb`.`Cart` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `quantity` INT NOT NULL,
   `price` DECIMAL(13,2) NOT NULL,
