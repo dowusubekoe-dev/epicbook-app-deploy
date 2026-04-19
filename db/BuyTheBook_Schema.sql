@@ -3,7 +3,6 @@ On your local machine, replace 'bookstore' with 'bookstore_db'
 **/
 
 -- Use JAWS_DB Database
-USE bookstore;
 
 -- Create Table Author on DB
 -- CREATE TABLE `bookstore`.`Author` (
