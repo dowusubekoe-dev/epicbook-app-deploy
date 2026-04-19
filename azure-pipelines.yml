@@ -24,9 +24,10 @@ pool:
 
 steps:
   - checkout: self
-  - checkout: git://pravinmishraaws/theepicbook.git
+    displayName: 'Checkout Deploy Repo'
+  - checkout: external_assignment
     path: s/assignment_repo
-    displayName: 'Checkout repository'
+    displayName: 'Checkout Assignment Source'
 
   # 1. DOWNLOAD INFRA DATA
   - download: infra
@@ -76,10 +77,10 @@ steps:
 
   # 5. RUN DEPLOYMENT
   - script: |
-      # IMPORTANT: Note the path change for the SQL files.
-      # The checkout 'path: s/assignment_repo' puts the files there.
+      # Ensure db_name is passed so it uses 'bookstore'
       ansible-playbook site.yml \
         -e "db_host=$(db_host)" \
+        -e "db_name=$(db_name)" \
         -e "db_password=$(db_password)" \
         -e "sql_source_path=$(Build.SourcesDirectory)/assignment_repo/db/"
     displayName: 'Run Ansible playbook'
