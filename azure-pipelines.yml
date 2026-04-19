@@ -4,7 +4,7 @@ resources:
   pipelines:
     - pipeline: infra
       source: infra-epicbook.git
-      trigger: true
+      trigger: yes
 
 variables:
   - group: epicbook-secrets
