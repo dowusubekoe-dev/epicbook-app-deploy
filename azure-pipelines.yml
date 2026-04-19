@@ -5,6 +5,11 @@ resources:
     - pipeline: infra
       source: infra-epicbook.git
       trigger: true
+  repositories:
+    - repository: external_assignment
+      type: github
+      name: pravinmishraaws/theepicbook
+      endpoint: dowusubekoe-dev
 
 variables:
   - group: epicbook-secrets
