@@ -1,23 +1,4 @@
 ---
-- name: Prepare system
-  hosts: all
-  become: yes
-  vars:
-    app_user: azureuser
-  roles:
-    - common
-    - nginx
-    - epicbook
-
-- name: Prepare system (common)
-  hosts: web
-  become: true
-  vars:
-    app_user: azureuser
-    app_dest: /opt/epicbook
-  roles:
-    - common
-
 - name: Prepare system (common)
   hosts: web
   become: true
