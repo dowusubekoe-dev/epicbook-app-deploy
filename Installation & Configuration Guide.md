@@ -152,7 +152,7 @@ npm install
 ## **Set Up MySQL Database**
 Create the database:
 ```sql
-CREATE DATABASE bookstore;
+CREATE DATABASE epicbookdb;
 ```
 
 Run the database scripts:
@@ -263,7 +263,7 @@ If everything is set up correctly, you should see **The EpicBook!** application 
 
 Following these steps, you have successfully installed, configured, and troubleshot common issues for **The EpicBook!** application.
 
-## Note: Incase you find any other issues, then let me know or raised the pull request to update this document.  
+## Note: Incase you find any other issues, then let me know or raised the pull request to update this document.
 
 Happy Deploying!
 

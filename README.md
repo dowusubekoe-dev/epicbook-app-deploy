@@ -2,7 +2,7 @@
 
 ## 📌 Introduction
 
-The **EpicBook!** project is an online bookstore application that allows users to browse a collection of books, add them to their cart, and proceed to checkout. This documentation provides an overview of the application's features, functionalities, and user flow.
+The **EpicBook!** project is an online epicbookdb application that allows users to browse a collection of books, add them to their cart, and proceed to checkout. This documentation provides an overview of the application's features, functionalities, and user flow.
 
 ## Documentation Structure
 
@@ -165,7 +165,7 @@ The **Checkout Process** finalizes the purchase and confirms the order placement
 
 ## 🎯 **Conclusion**
 
-The **EpicBook!** application provides a seamless user experience for discovering, selecting, and purchasing books online. With its well-structured navigation, visually appealing gallery, detailed product descriptions, and smooth checkout flow, it serves as a great example of an e-commerce bookstore.
+The **EpicBook!** application provides a seamless user experience for discovering, selecting, and purchasing books online. With its well-structured navigation, visually appealing gallery, detailed product descriptions, and smooth checkout flow, it serves as a great example of an e-commerce epicbookdb.
 
 ---
 

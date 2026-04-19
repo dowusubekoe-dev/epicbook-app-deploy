@@ -1,7 +1,7 @@
 {
   "name": "mvc_project2",
   "version": "1.0.0",
-  "description": "The EpicBook: A Bookstore to buy books",
+  "description": "The EpicBook: A epicbookdb to buy books",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
