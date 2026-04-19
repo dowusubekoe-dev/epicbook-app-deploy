@@ -90,18 +90,11 @@
   changed_when: false
   ignore_errors: true
 
-- name: Ensure the application database exists
-  mysql_db:
-    login_host: "{{ db_host }}"
-    login_user: "{{ db_user }}"
-    login_password: "{{ db_password }}"
-    name: epicbookdb # Replace with your actual DB name (e.g., epicbook_db)
-    state: present
-    # This tells Ansible to use the system's trusted certificates for SSL
-    login_unix_socket: ""
-    connect_timeout: 20
-  vars:
-    ansible_python_interpreter: /usr/bin/python3
+- name: Ensure the application database exists (Shell version)
+  shell: |
+    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
+    --ssl-mode=REQUIRED \
+    -e "CREATE DATABASE IF NOT EXISTS epicbookdb;"
   become: true
 
 - name: Run database schema setup
