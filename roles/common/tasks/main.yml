@@ -67,6 +67,15 @@
     mode: "0755"
   become: true
 
+- name: Fix directory ownership before clone
+  file:
+    path: "{{ app_dest }}"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    state: directory
+    recurse: yes
+  become: true
+
 - name: Clone EpicBook repo
   git:
     repo: "{{ app_repo }}"

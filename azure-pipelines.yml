@@ -10,9 +10,9 @@ variables:
   - group: epicbook-secrets
   # Note: These acts as defaults if the artifact load fails
   - name: vmPublicIp
-    value: '4.210.183.39'
+    value: '20.123.200.55'
   - name: db_host
-    value: 'epicbook-mysql-0qrmvo.mysql.database.azure.com'
+    value: 'epicbook-mysql-lkjb4a.mysql.database.azure.com'
 
 pool:
   name: 'epicbook-deploy-agent'
