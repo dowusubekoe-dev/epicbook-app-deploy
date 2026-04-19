@@ -93,7 +93,7 @@
     state: present
     ssl_mode: REQUIRED
 
-- name: Run database schema
+- name: Run database schema setup
   shell: >
     mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
     {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
