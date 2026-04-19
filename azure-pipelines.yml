@@ -67,6 +67,10 @@ steps:
     displayName: 'Debug roles visibility'
 
   - script: |
+      ansible-playbook -i inventory.ini playbook.yml -e "app_user=azureuser"
+    displayName: 'Run Ansible playbook'
+
+  - script: |
       set -e
       sudo dpkg --configure -a || true
       sudo apt-get clean
