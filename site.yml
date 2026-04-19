@@ -3,6 +3,7 @@
   hosts: web
   become: true
   vars:
+    app_user: azureuser
     app_dest: /opt/epicbook
   roles:
     - common
