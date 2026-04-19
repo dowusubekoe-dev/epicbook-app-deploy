@@ -1,4 +1,14 @@
 ---
+- name: Prepare system
+  hosts: all
+  become: yes
+  vars:
+    app_user: azureuser  # <--- Define it here
+  roles:
+    - common
+    - nginx
+    - epicbook
+    
 - name: Prepare system (common)
   hosts: web
   become: true
