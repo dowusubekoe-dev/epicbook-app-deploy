@@ -5,3 +5,5 @@
 .crash.log
 terraform-outputs.json
 *.auto.tfvars
+node_modules
+.DS_Store
