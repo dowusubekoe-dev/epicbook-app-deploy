@@ -95,7 +95,7 @@
     login_host: "{{ db_host }}"
     login_user: "{{ db_user }}"
     login_password: "{{ db_password }}"
-    name: epicbookdb" # Replace with your actual DB name (e.g., epicbook_db)
+    name: epicbookdb # Replace with your actual DB name (e.g., epicbook_db)
     state: present
     # ssl_mode: REQUIRED
   become: true
