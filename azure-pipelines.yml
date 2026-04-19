@@ -79,9 +79,10 @@ steps:
   - script: |
       # Ensure db_name is passed so it uses 'bookstore'
       ansible-playbook site.yml \
+        -i inventory.ini \
+        -e "db_password=$(db_password)" \
         -e "db_host=$(db_host)" \
         -e "db_name=$(db_name)" \
-        -e "db_password=$(db_password)" \
         -e "sql_source_path=$(Build.SourcesDirectory)/assignment_repo/db/"
     displayName: 'Run Ansible playbook'
 
