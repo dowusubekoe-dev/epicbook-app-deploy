@@ -39,6 +39,12 @@ steps:
       echo "DB Host: $db_host"
     displayName: 'Load infra outputs'
 
+  - script: |
+      ansible-playbook -i inventory/inventory.ini site.yml \
+        -e "app_user=azureuser" \
+        -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
+    displayName: 'Run Ansible Playbook'
+
   - task: DownloadSecureFile@1
     name: sshPrivateKey
     displayName: 'Download SSH private key'
