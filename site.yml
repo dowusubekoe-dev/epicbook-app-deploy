@@ -3,12 +3,12 @@
   hosts: all
   become: yes
   vars:
-    app_user: azureuser  # <--- Define it here
+    app_user: azureuser
   roles:
     - common
     - nginx
     - epicbook
-    
+
 - name: Prepare system (common)
   hosts: web
   become: true
@@ -17,7 +17,7 @@
     app_dest: /opt/epicbook
   roles:
     - common
-    
+
 - name: Prepare system (common)
   hosts: web
   become: true
