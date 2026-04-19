@@ -6,5 +6,5 @@ app_group: "www-data"
 nginx_site_name: "epicbook"
 app_port: 3000
 db_user: "azuredbadmin"
-db_name: "epicbookdb"
+db_name: "bookstore"
 pm2_home: "/var/www/.pm2"

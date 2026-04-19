@@ -1,11 +1,62 @@
----
-- name: Debug - What does Ansible see?
-  debug:
-    var: hostvars[inventory_hostname]
+- name: Ensure Ansible remote tmp directory exists
+  file:
+    path: /tmp/ansible-tmp
+    state: directory
+    mode: '0777'
+  become: yes
 
-- name: Debug - Specific variable check
-  debug:
-    msg: "The app_user is set to: {{ app_user | default('UNDEFINED_IN_ANSIBLE') }}"
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  become: yes
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Remove conflicting nodejs/npm packages
+  apt:
+    name:
+      - nodejs
+      - npm
+      - node-gyp
+      - node-cacache
+      - node-mkdirp
+      - node-nopt
+      - node-tar
+      - node-which
+      - libnode-dev
+      - libnode72
+    state: absent
+    purge: yes
+  ignore_errors: yes
+  become: yes
+
+- name: Install baseline packages
+  apt:
+    name:
+      - git
+      - curl
+      - unzip
+      - software-properties-common
+      - acl
+      - python3-mysqldb
+      - python3-pymysql
+      - mysql-client
+    state: present
+  become: yes
+
+- name: Add NodeSource repository for Node.js 20
+  shell: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+  args:
+    creates: /etc/apt/sources.list.d/nodesource.list
+  become: yes
+
+- name: Install Node.js
+  apt:
+    name: nodejs
+    state: present
+    update_cache: yes
+  become: yes
 
 - name: Create app directory
   file:
@@ -16,142 +67,57 @@
     mode: "0755"
   become: true
 
-- name: Check configured git safe directories
-  command: git config --global --get-all safe.directory
-  register: git_safe_dirs
-  changed_when: false
-  failed_when: false
-
-- name: Add safe directory for git
-  command: git config --global --add safe.directory {{ app_dest }}
-  when: app_dest not in git_safe_dirs.stdout_lines
-
-- name: Clone EpicBook repo from GitHub
+- name: Clone EpicBook repo
   git:
     repo: "{{ app_repo }}"
     dest: "{{ app_dest }}"
     version: main
-    update: false
+    update: yes
+    force: yes
   become: true
   become_user: "{{ app_user }}"
   notify: Restart EpicBook app
 
-- name: Install Node.js dependencies
-  apt:
-    name:
-      - ca-certificates
-      - curl
-      - gnupg
-    state: present
-    update_cache: true
-
-- name: Add NodeSource apt key
-  apt_key:
-    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
-    state: present
-
-- name: Add NodeSource repository for Node 20
-  apt_repository:
-    repo: "deb https://deb.nodesource.com/node_20.x nodistro main"
-    state: present
-
-- name: Install Node.js
-  apt:
-    name: nodejs
-    state: present
-    update_cache: true
-
-- name: Verify Node.js and npm are available
-  command: node --version
-  changed_when: false
-
-- name: Install MySQL client and Python dependencies
-  apt:
-    name:
-      - mysql-client
-      - python3-mysqldb
-      - python3-pymysql
-      - acl
-    state: present
+- name: Create database directory on Target VM
+  file:
+    path: "{{ app_dest }}/db"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
   become: true
 
-- name: Install MySQL dependencies for Python
-  apt:
-    name: python3-pymysql
-    state: present
-  become: true
-
-- name: Check if database is already seeded
-  shell: |
-    mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}' \
-    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" \
-    --skip-column-names
-  register: table_count
-  changed_when: false
-  ignore_errors: true
-
-- name: Ensure the application database exists (Shell version)
-  shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    --ssl-mode=REQUIRED \
-    -e "CREATE DATABASE IF NOT EXISTS epicbookdb;"
-  become: true
-
-- name: Force fresh copy of SQL schema
+- name: Force fresh copy of SQL scripts
   copy:
-    src: "{{ playbook_dir }}/db/BuyTheBook_Schema.sql"
-    dest: "/var/www/epicbook/db/BuyTheBook_Schema.sql"
+    src: "{{ item }}"
+    dest: "{{ app_dest }}/db/"
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0644"
     force: yes
+  with_fileglob:
+    - "{{ playbook_dir }}/db/*.sql"
   become: true
 
 - name: Ensure the application database exists
   shell: |
     mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
     --ssl-mode=REQUIRED \
-    -e "CREATE DATABASE IF NOT EXISTS epicbookdb;"
+    -e "CREATE DATABASE IF NOT EXISTS {{ db_name }};"
   become: true
 
 - name: Run database schema setup
   shell: |
     mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
     --ssl-mode=REQUIRED \
-    epicbookdb < /var/www/epicbook/db/BuyTheBook_Schema.sql
+    {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
   become: true
 
 - name: Run author seed
   shell: |
     mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
     --ssl-mode=REQUIRED \
-    epicbookdb < /var/www/epicbook/db/author_seed.sql
-  become: true
-
-- name: Ensure app root ownership before npm install
-  file:
-    path: "{{ app_dest }}"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    recurse: true
-  become: true
-
-- name: Remove existing node_modules if present
-  file:
-    path: "{{ app_dest }}/node_modules"
-    state: absent
-  become: true
-
-- name: Remove package-lock.json for clean install
-  file:
-    path: "{{ app_dest }}/package-lock.json"
-    state: absent
-  become: true
-
-- name: Ensure npm cache directory exists
-  file:
-    path: "/home/{{ app_user }}/.npm"
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0755"
+    {{ db_name }} < {{ app_dest }}/db/author_seed.sql
   become: true
 
 - name: Install app dependencies
@@ -162,7 +128,6 @@
   become_user: "{{ app_user }}"
   environment:
     HOME: "/home/{{ app_user }}"
-    npm_config_cache: "/home/{{ app_user }}/.npm"
 
 - name: Create .env file
   copy:
@@ -177,61 +142,6 @@
     group: "{{ app_group }}"
     mode: "0640"
   become: true
-  notify: Restart EpicBook app
-
-- name: Update config.json with DB credentials
-  copy:
-    dest: "{{ app_dest }}/config/config.json"
-    content: |
-      {
-        "development": {
-          "username": "{{ db_user }}",
-          "password": "{{ db_password }}",
-          "database": "{{ db_name }}",
-          "host": "{{ db_host }}",
-          "dialect": "mysql",
-          "dialectOptions": {
-            "ssl": {
-              "require": true,
-              "rejectUnauthorized": false
-            }
-          }
-        },
-        "production": {
-          "username": "{{ db_user }}",
-          "password": "{{ db_password }}",
-          "database": "{{ db_name }}",
-          "host": "{{ db_host }}",
-          "dialect": "mysql",
-          "dialectOptions": {
-            "ssl": {
-              "require": true,
-              "rejectUnauthorized": false
-            }
-          }
-        }
-      }
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0640"
-  become: true
-  notify: Restart EpicBook app
-
-- name: Ensure app root ownership
-  file:
-    path: "{{ app_dest }}"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    recurse: true
-  become: true
-
-- name: Fix config.json ownership and permissions
-  file:
-    path: "{{ app_dest }}/config/config.json"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0640"
-  become: true
 
 - name: Install pm2 globally
   npm:
@@ -239,65 +149,12 @@
     global: true
   become: true
 
-- name: Create pm2 home directory for app user
-  file:
-    path: "{{ pm2_home }}"
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0755"
-  become: true
-
-- name: Create .ansible tmp directory for app user
-  file:
-    path: /var/www/.ansible/tmp
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0755"
-    recurse: true
-  become: true
-
-- name: Check PM2 process state
-  command: pm2 describe epicbook
-  register: pm2_process
-  changed_when: false
-  failed_when: false
-  become: true
-  become_user: "{{ app_user }}"
-  environment:
-    PM2_HOME: "{{ pm2_home }}"
-    HOME: "/home/{{ app_user }}"
-
-- name: Start app with pm2 if missing
+- name: Start app with pm2
   command: pm2 start server.js --name epicbook --update-env
   args:
     chdir: "{{ app_dest }}"
-  when: pm2_process.rc != 0
-  become: true
-  become_user: "{{ app_user }}"
-  environment:
-    PORT: "{{ app_port }}"
-    PM2_HOME: "{{ pm2_home }}"
-    HOME: "/home/{{ app_user }}"
-  register: pm2_start
-  failed_when: pm2_start.rc != 0
-
-- name: Save pm2 process list after first start
-  command: pm2 save
-  when: pm2_process.rc != 0
-  changed_when: false
   become: true
   become_user: "{{ app_user }}"
   environment:
     PM2_HOME: "{{ pm2_home }}"
-    HOME: "/home/{{ app_user }}"
-
-- name: Configure pm2 to start on boot
-  command: pm2 startup systemd -u {{ app_user }} --hp "/home/{{ app_user }}"
-  args:
-    creates: /etc/systemd/system/pm2-{{ app_user }}.service
-  become: true
-  environment:
-    PM2_HOME: "{{ pm2_home }}"
-    HOME: "/home/{{ app_user }}"
+  ignore_errors: yes
