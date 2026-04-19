@@ -84,6 +84,15 @@
   changed_when: false
   ignore_errors: true
 
+- name: Ensure the application database exists
+  mysql_db:
+    login_host: "{{ db_host }}"
+    login_user: "{{ db_user }}"
+    login_password: "{{ db_password }}"
+    name: "{{ db_name }}" # Replace with your actual DB name (e.g., epicbook_db)
+    state: present
+    ssl_mode: REQUIRED
+
 - name: Run database schema
   shell: >
     mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
