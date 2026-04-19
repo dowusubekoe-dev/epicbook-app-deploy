@@ -97,7 +97,7 @@
     login_password: "{{ db_password }}"
     name: epicbookdb" # Replace with your actual DB name (e.g., epicbook_db)
     state: present
-    ssl_mode: REQUIRED
+    # ssl_mode: REQUIRED
   become: true
 
 - name: Run database schema setup
