@@ -78,7 +78,7 @@ steps:
         -e "app_user=azureuser" \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
-        -e "db_name=$(db_name)"
+        -e "db_name=epicbookdb"
     displayName: 'Run Ansible playbook'
 
   # 6. VERIFY
