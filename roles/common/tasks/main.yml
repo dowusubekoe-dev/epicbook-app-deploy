@@ -104,25 +104,25 @@
     force: yes
   become: true
 
+- name: Ensure the application database exists
+  shell: |
+    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
+    --ssl-mode=REQUIRED \
+    -e "CREATE DATABASE IF NOT EXISTS epicbookdb;"
+  become: true
+
 - name: Run database schema setup
-  shell: >
-    mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
+  shell: |
+    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
+    --ssl-mode=REQUIRED \
+    epicbookdb < /var/www/epicbook/db/BuyTheBook_Schema.sql
   become: true
 
 - name: Run author seed
-  shell: >
-    mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/author_seed.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
-  become: true
-
-- name: Run books seed
-  shell: >
-    mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/books_seed.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
+  shell: |
+    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
+    --ssl-mode=REQUIRED \
+    epicbookdb < /var/www/epicbook/db/author_seed.sql
   become: true
 
 - name: Ensure app root ownership before npm install

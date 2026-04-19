@@ -3,6 +3,7 @@ On your local machine, replace 'epicbookdb' with 'epicbookdb_db'
 **/
 
 -- Use JAWS_DB Database
+USE epicbookdb;
 
 -- Create Table Author on DB
 -- CREATE TABLE `epicbookdb`.`Author` (
