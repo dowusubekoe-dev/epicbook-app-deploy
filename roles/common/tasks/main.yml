@@ -97,7 +97,11 @@
     login_password: "{{ db_password }}"
     name: epicbookdb # Replace with your actual DB name (e.g., epicbook_db)
     state: present
-    # ssl_mode: REQUIRED
+    # This tells Ansible to use the system's trusted certificates for SSL
+    login_unix_socket: ""
+    connect_timeout: 20
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
   become: true
 
 - name: Run database schema setup
