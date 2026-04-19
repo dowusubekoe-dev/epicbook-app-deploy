@@ -40,10 +40,10 @@ steps:
     displayName: 'Load infra outputs'
 
   - script: |
-      ansible-playbook -i inventory/inventory.ini site.yml \
-        -e "app_user=azureuser" \
-        -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
-    displayName: 'Run Ansible Playbook'
+      ansible-playbook -i inventory.ini site.yml \
+      -e "app_user=azureuser" \
+      -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
+    displayName: 'Run Ansible playbook'
 
   - task: DownloadSecureFile@1
     name: sshPrivateKey
