@@ -97,6 +97,13 @@
     -e "CREATE DATABASE IF NOT EXISTS epicbookdb;"
   become: true
 
+- name: Force fresh copy of SQL schema
+  copy:
+    src: "{{ playbook_dir }}/db/BuyTheBook_Schema.sql"
+    dest: "/var/www/epicbook/db/BuyTheBook_Schema.sql"
+    force: yes
+  become: true
+
 - name: Run database schema setup
   shell: >
     mysql -h {{ db_host }} -P 3306 -u {{ db_user }} --ssl-mode=REQUIRED -p'{{ db_password }}'
