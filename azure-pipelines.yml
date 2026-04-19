@@ -106,6 +106,8 @@ steps:
 
       echo "Generated inventory:"
       cat inventory.ini
+      echo "[all]" > inventory.ini
+      echo "$(public_ip)" >> inventory.ini
     displayName: 'Generate inventory.ini'
 
   - script: |
