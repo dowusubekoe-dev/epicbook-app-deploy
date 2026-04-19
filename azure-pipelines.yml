@@ -8,6 +8,7 @@ resources:
 
 variables:
   - group: epicbook-secrets
+  # Note: These acts as defaults if the artifact load fails
   - name: vmPublicIp
     value: '4.210.183.39'
   - name: db_host
@@ -20,77 +21,41 @@ steps:
   - checkout: self
     displayName: 'Checkout repository'
 
+  # 1. DOWNLOAD INFRA DATA
   - download: infra
     artifact: infra-outputs
     displayName: 'Download infra outputs artifact'
 
+  # 2. LOAD VARIABLES
   - script: |
       set -e
-
-      echo "Downloaded artifact contents:"
-      ls -R "$(Pipeline.Workspace)"
-
-      source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
-
-      echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
-      echo "##vso[task.setvariable variable=db_host]$db_host"
-
-      echo "VM IP: $vmPublicIp"
-      echo "DB Host: $db_host"
+      if [ -f "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env" ]; then
+        source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
+        echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
+        echo "##vso[task.setvariable variable=db_host]$db_host"
+      else
+        echo "Infra artifact not found, using default variables"
+      fi
     displayName: 'Load infra outputs'
 
+  # 3. PREPARE ENVIRONMENT (Install and SSH)
   - script: |
-      ansible-playbook -i inventory.ini site.yml \
-      -e "app_user=azureuser" \
-      -e "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
-    displayName: 'Run Ansible playbook'
+      sudo apt-get update -y
+      sudo apt-get install -y ansible --no-install-recommends
+    displayName: 'Install Ansible'
 
   - task: DownloadSecureFile@1
     name: sshPrivateKey
-    displayName: 'Download SSH private key'
     inputs:
       secureFile: 'azure_vm_key'
-
-  - script: |
-      echo "Waiting for apt lock to be released..."
-      while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-        echo "APT is locked, waiting..."
-        sleep 5
-      done
-
-      echo "Lock released"
-    displayName: 'Wait for apt lock'
-
-  - script: |
-      echo "=== WORKSPACE ROOT ==="
-      pwd
-
-      echo "=== FULL TREE ==="
-      ls -R $(Build.SourcesDirectory)
-
-      echo "=== ROLES DIR CHECK ==="
-      ls -R $(Build.SourcesDirectory)/roles || echo "NO ROLES DIRECTORY FOUND"
-    displayName: 'Debug roles visibility'
-
-  - script: |
-      ansible-playbook -i inventory.ini playbook.yml -e "app_user=azureuser"
-    displayName: 'Run Ansible playbook'
-
-  - script: |
-      set -e
-      sudo dpkg --configure -a || true
-      sudo apt-get clean
-      sudo apt-get update -y
-      sudo apt-get install -y ansible sshpass --no-install-recommends
-    displayName: 'Install Ansible'
 
   - script: |
       mkdir -p ~/.ssh
       cp "$(sshPrivateKey.secureFilePath)" ~/.ssh/azure_vm_key
       chmod 600 ~/.ssh/azure_vm_key
-      ls -l ~/.ssh
     displayName: 'Prepare SSH private key'
 
+  # 4. GENERATE INVENTORY (Fixed Overwrite)
   - script: |
       cat > inventory.ini <<EOF
       [web]
@@ -98,33 +63,25 @@ steps:
 
       [web:vars]
       ansible_user=azureuser
-      ansible_connection=ssh
       ansible_ssh_private_key_file=$HOME/.ssh/azure_vm_key
       ansible_ssh_common_args='-o StrictHostKeyChecking=no'
       ansible_python_interpreter=/usr/bin/python3
       EOF
-
-      echo "Generated inventory:"
+      echo "Final Inventory Content:"
       cat inventory.ini
-      echo "[all]" > inventory.ini
-      echo "$(public_ip)" >> inventory.ini
     displayName: 'Generate inventory.ini'
 
+  # 5. RUN DEPLOYMENT
   - script: |
-      ansible all -m ping
-    displayName: 'Test Ansible connectivity'
-
-  - script: |
-      ansible-playbook site.yml \
+      # Pass both app_user and db info here
+      ansible-playbook -i inventory.ini site.yml \
+        -e "app_user=azureuser" \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
     displayName: 'Run Ansible playbook'
 
+  # 6. VERIFY
   - script: |
-      set -e
-      echo "========================================="
       echo "App URL: http://$(vmPublicIp)"
-      echo "========================================="
       curl -I --max-time 20 http://$(vmPublicIp)
-      curl --max-time 20 http://$(vmPublicIp) | head
-    displayName: 'Verify deployment Url and Nginx'
+    displayName: 'Verify deployment'
