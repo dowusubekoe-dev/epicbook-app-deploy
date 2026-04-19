@@ -4,7 +4,7 @@ resources:
   pipelines:
     - pipeline: infra
       source: infra-epicbook.git
-      trigger: yes
+      trigger: true
 
 variables:
   - group: epicbook-secrets
@@ -77,7 +77,7 @@ steps:
       ansible-playbook -i inventory.ini site.yml \
         -e "app_user=azureuser" \
         -e "db_host=$(db_host)" \
-        -e "db_password=$(db_password)"
+        -e "db_password=$(db_password)" \
         -e "db_name=epicbookdb"
     displayName: 'Run Ansible playbook'
 
