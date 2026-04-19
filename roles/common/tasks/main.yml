@@ -1,4 +1,12 @@
 ---
+- name: Debug - What does Ansible see?
+  debug:
+    var: hostvars[inventory_hostname]
+
+- name: Debug - Specific variable check
+  debug:
+    msg: "The app_user is set to: {{ app_user | default('UNDEFINED_IN_ANSIBLE') }}"
+
 - name: Create app directory
   file:
     path: "{{ app_dest }}"
