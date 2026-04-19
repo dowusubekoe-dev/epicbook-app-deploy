@@ -98,14 +98,9 @@
 
 - name: Force fresh copy of SQL scripts
   copy:
-    src: "{{ item }}"
+    src: "{{ sql_source_path }}" # Passed from the pipeline extra-vars
     dest: "{{ app_dest }}/db/"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0644"
     force: yes
-  with_fileglob:
-    - "{{ playbook_dir }}/db/*.sql"
   become: true
 
 - name: Ensure the application database exists

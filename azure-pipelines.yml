@@ -19,6 +19,8 @@ pool:
 
 steps:
   - checkout: self
+  - checkout: git://pravinmishraaws/theepicbook.git
+    path: s/assignment_repo
     displayName: 'Checkout repository'
 
   # 1. DOWNLOAD INFRA DATA
@@ -29,13 +31,9 @@ steps:
   # 2. LOAD VARIABLES
   - script: |
       set -e
-      if [ -f "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env" ]; then
-        source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
-        echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
-        echo "##vso[task.setvariable variable=db_host]$db_host"
-      else
-        echo "Infra artifact not found, using default variables"
-      fi
+      source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
+      echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
+      echo "##vso[task.setvariable variable=db_host]$db_host"
     displayName: 'Load infra outputs'
 
   # 3. PREPARE ENVIRONMENT (Install and SSH)
@@ -73,12 +71,12 @@ steps:
 
   # 5. RUN DEPLOYMENT
   - script: |
-      # Pass both app_user and db info here
-      ansible-playbook -i inventory.ini site.yml \
-        -e "app_user=azureuser" \
+      # IMPORTANT: Note the path change for the SQL files.
+      # The checkout 'path: s/assignment_repo' puts the files there.
+      ansible-playbook site.yml \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)" \
-        -e "db_name=epicbookdb"
+        -e "sql_source_path=$(Build.SourcesDirectory)/assignment_repo/db/"
     displayName: 'Run Ansible playbook'
 
   # 6. VERIFY
