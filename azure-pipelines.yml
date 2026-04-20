@@ -38,7 +38,7 @@ steps:
     inputs:
       knownHostsEntry: '$(vmPublicIp)'
       sshPublicKey: '$(ssh_public_key)'
-      sshKeySecureFile: 'id_rsa'
+      sshKeySecureFile: 'azure_vm_key'
 
   # 4. RUN DEPLOYMENT (Clean and Simple)
   - script: |
