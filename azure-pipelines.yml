@@ -13,7 +13,7 @@ resources:
 
 variables:
   - group: epicbook-secrets
-  # Note: These acts as defaults if the artifact load fails
+  # These act as defaults, but can be overridden by the 'infra' pipeline artifact if needed
   - name: vmPublicIp
     value: '20.123.200.55'
   - name: db_host
@@ -23,71 +23,35 @@ pool:
   name: 'epicbook-deploy-agent'
 
 steps:
+  # 1. We only need the Ansible repo (self)
   - checkout: self
-    displayName: 'Checkout Deploy Repo'
-  - checkout: external_assignment
-    path: s/assignment_repo
-    displayName: 'Checkout Assignment Source'
+    displayName: 'Checkout Ansible Playbook'
 
-  # 1. DOWNLOAD INFRA DATA
+  # 2. Download Terraform/Infra outputs (Optional if you want to dynamic IPs)
   - download: infra
     artifact: infra-outputs
-    displayName: 'Download infra outputs artifact'
+    displayName: 'Get Latest Infra Data'
+    continueOnError: true
 
-  # 2. LOAD VARIABLES
-  - script: |
-      set -e
-      source "$(Pipeline.Workspace)/infra/infra-outputs/infra-outputs.env"
-      echo "##vso[task.setvariable variable=vmPublicIp]$vmPublicIp"
-      echo "##vso[task.setvariable variable=db_host]$db_host"
-    displayName: 'Load infra outputs'
-
-  # 3. PREPARE ENVIRONMENT (Install and SSH)
-  - script: |
-      sudo apt-get update -y
-      sudo apt-get install -y ansible --no-install-recommends
-    displayName: 'Install Ansible'
-
-  - task: DownloadSecureFile@1
-    name: sshPrivateKey
+  # 3. Setup SSH Key (Using the dedicated Task)
+  - task: InstallSSHKey@0
     inputs:
-      secureFile: 'azure_vm_key'
+      knownHostsEntry: '$(vmPublicIp)'
+      sshPublicKey: '$(ssh_public_key)'
+      sshKeySecureFile: 'id_rsa'
 
+  # 4. RUN DEPLOYMENT (Clean and Simple)
   - script: |
-      mkdir -p ~/.ssh
-      cp "$(sshPrivateKey.secureFilePath)" ~/.ssh/azure_vm_key
-      chmod 600 ~/.ssh/azure_vm_key
-    displayName: 'Prepare SSH private key'
+      ansible-playbook -i inventory.ini site.yml \
+        -e "vm_public_ip=$(vmPublicIp)" \
+        -e "database_dns=$(db_host)" \
+        -e "db_password=$(db_password)"
+    displayName: 'Execute Role-Based Deployment'
+    env:
+      ANSIBLE_HOST_KEY_CHECKING: 'False'
 
-  # 4. GENERATE INVENTORY (Fixed Overwrite)
+  # 5. VERIFY
   - script: |
-      cat > inventory.ini <<EOF
-      [web]
-      $(vmPublicIp)
-
-      [web:vars]
-      ansible_user=azureuser
-      ansible_ssh_private_key_file=$HOME/.ssh/azure_vm_key
-      ansible_ssh_common_args='-o StrictHostKeyChecking=no'
-      ansible_python_interpreter=/usr/bin/python3
-      EOF
-      echo "Final Inventory Content:"
-      cat inventory.ini
-    displayName: 'Generate inventory.ini'
-
-  # 5. RUN DEPLOYMENT
-  - script: |
-      # Ensure db_name is passed so it uses 'bookstore'
-      ansible-playbook site.yml \
-        -i inventory.ini \
-        -e "db_password=$(db_password)" \
-        -e "db_host=$(db_host)" \
-        -e "db_name=$(db_name)" \
-        -e "sql_source_path=$(Build.SourcesDirectory)/assignment_repo/db/"
-    displayName: 'Run Ansible playbook'
-
-  # 6. VERIFY
-  - script: |
-      echo "App URL: http://$(vmPublicIp)"
-      curl -I --max-time 20 http://$(vmPublicIp)
-    displayName: 'Verify deployment'
+      echo "Checking [The EpicBook!](http://$(vmPublicIp))"
+      curl -s -I http://$(vmPublicIp) | grep "200 OK"
+    displayName: 'Final Health Check'

@@ -1,0 +1,12 @@
+---
+# Database defaults
+db_user: "root"
+db_name: "bookstore"
+db_password: "GuestStrongPassword123!"
+
+# Application defaults
+app_repo: "https://github.com/pravinmishraaws/theepicbook.git"
+app_dest: "/home/azureuser/theepicbook"
+app_user: "azureuser"
+app_port: 3001
+pm2_home: "/home/azureuser/.pm2"

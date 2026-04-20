@@ -1,2 +1,12 @@
-app_user: azureuser
-app_dest: /opt/epicbook
+---
+# The version of Node.js to install
+node_version: "20.x"
+
+# List of baseline system packages
+common_packages:
+  - git
+  - curl
+  - wget
+  - net-tools
+  - python3-pip
+  - python3-pymysql

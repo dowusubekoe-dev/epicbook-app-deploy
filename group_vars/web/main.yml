@@ -1,10 +1,21 @@
 ---
+# Repository & Path
 app_repo: "https://github.com/pravinmishraaws/theepicbook.git"
-app_dest: "/var/www/epicbook"
-app_user: "www-data"
-app_group: "www-data"
-nginx_site_name: "epicbook"
-app_port: 3000
-db_user: "azuredbadmin"
+app_dest: "/home/azureuser/theepicbook"
+
+# Permissions
+app_user: "azureuser"
+app_group: "azureuser"
+
+# Nginx & PM2
+nginx_site_name: "theepicbooks"
+app_port: 3001  # Updated to match your Azure Inbound Rule
+pm2_home: "/home/azureuser/.pm2"
+
+# Database Configuration
+db_user: "root"
 db_name: "bookstore"
-pm2_home: "/var/www/.pm2"
+db_password: "GuestStrongPassword123!"
+
+# Networking
+server_ip: "20.123.200.55"

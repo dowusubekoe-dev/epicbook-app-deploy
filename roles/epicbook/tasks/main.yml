@@ -1,28 +1,66 @@
-- name: Install Node.js dependencies
+---
+- name: Install MySQL Server
+  apt:
+    name: mysql-server
+    state: present
+
+- name: Start and enable MySQL
+  service:
+    name: mysql
+    state: started
+    enabled: yes
+
+- name: Configure root for native password authentication
   shell: |
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
-    apt install -y nodejs
+    mysql -e "ALTER USER '{{ db_user }}'@'localhost' IDENTIFIED WITH mysql_native_password BY '{{ db_password }}';"
+    mysql -e "FLUSH PRIVILEGES;"
+  register: mysql_auth_fix
+  changed_when: "'Query OK' in mysql_auth_fix.stdout"
+  ignore_errors: yes
 
-- name: Install PM2 globally
-  npm:
-    name: pm2
-    global: yes
+- name: Create Bookstore database
+  mysql_db:
+    name: "{{ db_name }}"
+    state: present
+    login_user: "{{ db_user }}"
+    login_password: "{{ db_password }}"
 
-- name: Clone EpicBook repo
+- name: Clone The EpicBook repository
   git:
-    repo: https://github.com/pravinmishraaws/theepicbook.git
-    dest: /var/www/epicbook
+    repo: "{{ app_repo }}"
+    dest: "{{ app_dest }}"
+    force: yes
+    version: main
+  become_user: "{{ app_user }}"
 
-- name: Install npm dependencies
+- name: Install NPM dependencies
   npm:
-    path: /var/www/epicbook
+    path: "{{ app_dest }}"
+  become_user: "{{ app_user }}"
 
-- name: Configure DB connection
+- name: Deploy config and index templates (SSL Fix)
   template:
-    src: db.js.j2
-    dest: /var/www/epicbook/config/db.js
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+  loop:
+    - { src: 'config.json.j2', dest: "{{ app_dest }}/config/config.json" }
+    - { src: 'index.js.j2', dest: "{{ app_dest }}/models/index.js" }
+  notify: restart epicbook
 
-- name: Start application with PM2
-  shell: pm2 start server.js --name epicbook
+- name: Import Database Schema and Seeds (Force)
+  shell: |
+    mysql -f -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
+    mysql -f -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/author_seed.sql
+    mysql -f -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/books_seed.sql
+  become: true
+
+- name: Ensure PM2 is installed and App is started
+  shell: |
+    npm install -g pm2
+    pm2 delete epicbook || true
+    PORT={{ app_port }} pm2 start server.js --name "epicbook"
   args:
-    chdir: /var/www/epicbook
+    chdir: "{{ app_dest }}"
+  become_user: "{{ app_user }}"
+  environment:
+    PM2_HOME: "{{ pm2_home }}"

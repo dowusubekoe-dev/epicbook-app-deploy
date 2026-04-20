@@ -177,6 +177,75 @@ If you are developer, you can consider developing below feature and send the pul
 - Implementing a payment gateway.
 - Enhancing user authentication and order history.
 
+### Clean Up
+To ensure your **Ansible playbook** runs in a truly "clean" environment and confirms that your automation handles everything from scratch, you need to strip back the manual Nginx, PM2, and MySQL configurations.
+
+Run these commands on your target VM to reset the slate:
+
+---
+
+### 1. Remove the Application & Process Manager
+Since Ansible will clone the repo and reinstall dependencies, we should delete the existing folder and the PM2 processes.
+
+```bash
+# Stop and delete the PM2 process
+pm2 delete all && pm2 save
+
+# Uninstall PM2 globally to let Ansible reinstall it
+sudo npm uninstall -g pm2
+
+# Remove the application directory
+rm -rf /home/azureuser/theepicbook
+```
+
+### 2. Wipe the Database (MySQL)
+To test if your `epicbook` role correctly handles the **Native Password Fix** and **Seeding**, we should drop the existing database.
+
+```bash
+# Log in and drop the database
+sudo mysql -u root -e "DROP DATABASE IF EXISTS bookstore; FLUSH PRIVILEGES;"
+
+# Optional: If you want to force Ansible to redo the User Auth fix,
+# you can reset the root password to default (empty), but usually,
+# 'ALTER USER' in the playbook will just overwrite it anyway.
+```
+
+### 3. Reset the Web Server (Nginx)
+Ansible expects to manage the configuration files. Manual files in `sites-enabled` can cause conflicts.
+
+```bash
+# Stop Nginx
+sudo systemctl stop nginx
+
+# Remove the manual configuration file we created
+sudo rm -f /etc/nginx/sites-enabled/theepicbooks
+sudo rm -f /etc/nginx/sites-available/theepicbooks
+
+# Restore the default if you want a complete reset
+sudo ln -s /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+
+# Remove any files in conf.d that might interfere
+sudo rm -f /etc/nginx/conf.d/theepicbooks.conf
+```
+
+### 4. Clean Package Cache
+This ensures Ansible actually "installs" the packages rather than just seeing them as already present.
+
+```bash
+sudo apt-get purge -y nginx mysql-server nodejs
+sudo apt-get autoremove -y
+sudo apt-get clean
+```
+
+---
+
+### Why this is important for your Assignment:
+By clearing the VM, you are performing a **"Zero-State Test."** When you trigger your Azure DevOps pipeline:
+1.  If the site [The EpicBook!](http://20.123.200.55/) comes back to life, you have **100% proof** that your Ansible code is perfect.
+2.  It prevents "False Positives" (where the site works only because of a manual setting you forgot was there).
+
+**Once you've run these, your VM is a blank canvas. Are you ready to trigger the pipeline?**
+
 
 
 

@@ -1,164 +1,33 @@
-- name: Ensure Ansible remote tmp directory exists
-  file:
-    path: /tmp/ansible-tmp
-    state: directory
-    mode: '0777'
-  become: yes
-
-- name: Update apt cache
+---
+- name: Update apt cache and upgrade all packages
   apt:
     update_cache: yes
+    upgrade: dist
     cache_valid_time: 3600
-  become: yes
-  environment:
-    DEBIAN_FRONTEND: noninteractive
 
-- name: Remove conflicting nodejs/npm packages
-  apt:
-    name:
-      - nodejs
-      - npm
-      - node-gyp
-      - node-cacache
-      - node-mkdirp
-      - node-nopt
-      - node-tar
-      - node-which
-      - libnode-dev
-      - libnode72
-    state: absent
-    purge: yes
-  ignore_errors: yes
-  become: yes
-
-- name: Install baseline packages
+- name: Install baseline dependencies
   apt:
     name:
       - git
       - curl
-      - unzip
-      - software-properties-common
-      - acl
-      - python3-mysqldb
-      - python3-pymysql
-      - mysql-client
+      - wget
+      - net-tools
+      - python3-pip
+      - python3-pymysql  # CRITICAL: Allows Ansible to talk to MySQL
     state: present
-  become: yes
 
-- name: Add NodeSource repository for Node.js 20
-  shell: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+- name: Add NodeSource repository for Node.js 20.x
+  shell: |
+    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   args:
     creates: /etc/apt/sources.list.d/nodesource.list
-  become: yes
 
 - name: Install Node.js
   apt:
     name: nodejs
     state: present
-    update_cache: yes
-  become: yes
 
-- name: Create app directory
-  file:
-    path: "{{ app_dest }}"
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0755"
-  become: true
-
-- name: Fix directory ownership before clone
-  file:
-    path: "{{ app_dest }}"
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    state: directory
-    recurse: yes
-  become: true
-
-- name: Clone EpicBook repo
-  git:
-    repo: "{{ app_repo }}"
-    dest: "{{ app_dest }}"
-    version: main
-    update: yes
-    force: yes
-  become: true
-  become_user: "{{ app_user }}"
-  notify: Restart EpicBook app
-
-- name: Create database directory on Target VM
-  file:
-    path: "{{ app_dest }}/db"
-    state: directory
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0755"
-  become: true
-
-- name: Force fresh copy of SQL scripts
-  copy:
-    src: "{{ sql_source_path }}" # Passed from the pipeline extra-vars
-    dest: "{{ app_dest }}/db/"
-    force: yes
-  become: true
-
-- name: Ensure the application database exists
-  shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    --ssl-mode=REQUIRED \
-    -e "CREATE DATABASE IF NOT EXISTS {{ db_name }};"
-  become: true
-
-- name: Run database schema setup
-  shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    --ssl-mode=REQUIRED \
-    {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
-  become: true
-
-- name: Run author seed
-  shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    --ssl-mode=REQUIRED \
-    {{ db_name }} < {{ app_dest }}/db/author_seed.sql
-  become: true
-
-- name: Install app dependencies
-  command: npm install
-  args:
-    chdir: "{{ app_dest }}"
-  become: true
-  become_user: "{{ app_user }}"
-  environment:
-    HOME: "/home/{{ app_user }}"
-
-- name: Create .env file
-  copy:
-    dest: "{{ app_dest }}/.env"
-    content: |
-      PORT={{ app_port }}
-      DB_HOST={{ db_host }}
-      DB_USER={{ db_user }}
-      DB_PASSWORD={{ db_password }}
-      DB_NAME={{ db_name }}
-    owner: "{{ app_user }}"
-    group: "{{ app_group }}"
-    mode: "0640"
-  become: true
-
-- name: Install pm2 globally
-  npm:
-    name: pm2
-    global: true
-  become: true
-
-- name: Start app with pm2
-  command: pm2 start server.js --name epicbook --update-env
-  args:
-    chdir: "{{ app_dest }}"
-  become: true
-  become_user: "{{ app_user }}"
-  environment:
-    PM2_HOME: "{{ pm2_home }}"
-  ignore_errors: yes
+- name: Ensure Git is at the latest version
+  apt:
+    name: git
+    state: latest
