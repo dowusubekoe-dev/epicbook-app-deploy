@@ -54,9 +54,31 @@
     mysql -f -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/books_seed.sql
   become: true
 
-- name: Ensure PM2 is installed and App is started
+# ... (MySQL and Clone tasks stay the same) ...
+
+- name: Install PM2 globally (Proper Ansible Way)
+  npm:
+    name: pm2
+    global: yes
+    state: present
+
+- name: Ensure PM2 is in the system path
+  file:
+    src: /usr/bin/pm2
+    dest: /usr/local/bin/pm2
+    state: link
+  ignore_errors: true
+
+- name: Install NPM dependencies for the app
+  npm:
+    path: "{{ app_dest }}"
+  become_user: "{{ app_user }}"
+
+# ... (Templates and Database Import stay the same) ...
+
+- name: Start App with PM2
   shell: |
-    npm install -g pm2
+    # We removed 'npm install -g pm2' from here because it's already done above
     pm2 delete epicbook || true
     PORT={{ app_port }} pm2 start server.js --name "epicbook"
   args:

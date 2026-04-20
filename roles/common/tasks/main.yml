@@ -5,6 +5,16 @@
     upgrade: dist
     cache_valid_time: 3600
 
+- name: Install baseline packages
+  apt:
+    name:
+      - nginx
+      - git
+      - curl
+      - python3-pymysql
+    state: present
+    update_cache: yes
+
 - name: Install baseline dependencies
   apt:
     name:
