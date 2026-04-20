@@ -13,7 +13,6 @@ resources:
 
 variables:
   - group: epicbook-secrets
-  # These act as defaults, but can be overridden by the 'infra' pipeline artifact if needed
   - name: vmPublicIp
     value: '20.123.200.55'
   - name: db_host
@@ -23,37 +22,34 @@ pool:
   name: 'epicbook-deploy-agent'
 
 steps:
-  # 1. We only need the Ansible repo (self)
   - checkout: self
     displayName: 'Checkout Ansible Playbook'
 
-  # 2. Download Terraform/Infra outputs (Optional if you want to dynamic IPs)
   - download: infra
     artifact: infra-outputs
     displayName: 'Get Latest Infra Data'
     continueOnError: true
 
-  # 3. Setup SSH Key (Using the dedicated Task)
   - task: InstallSSHKey@0
     inputs:
       knownHostsEntry: '$(vmPublicIp)'
       sshPublicKey: '$(ssh_public_key)'
       sshKeySecureFile: 'azure_vm_key'
 
-  # 4. RUN DEPLOYMENT (Clean and Simple)
+  # 4. RUN DEPLOYMENT (Updated to match group_vars logic)
   - script: |
       ansible-playbook -i inventory.ini site.yml \
-        -e "vm_public_ip=$(vmPublicIp)" \
-        -e "database_dns=$(db_host)" \
+        -e "ansible_host=$(vmPublicIp)" \
+        -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
 
-  # 5. VERIFY
+  # 5. VERIFY (Wait for Nginx to handle the redirect)
   - script: |
-      echo "Waiting for service to settle..."
+      echo "Waiting for Nginx and PM2 to settle..."
       sleep 20
-      echo "Checking [The EpicBook!](http://$(vmPublicIp))"
-      curl -s -I http://$(vmPublicIp)
+      echo "Testing connection to http://$(vmPublicIp)"
+      curl -f -I http://$(vmPublicIp)
     displayName: 'Final Health Check'
