@@ -14,7 +14,7 @@
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
-  notify: reload nginx
+  notify: restart nginx
 
 - name: Deploy EpicBook reverse proxy configuration
   template:
