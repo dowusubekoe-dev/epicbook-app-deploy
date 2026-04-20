@@ -52,6 +52,8 @@ steps:
 
   # 5. VERIFY
   - script: |
+      echo "Waiting for service to settle..."
+      sleep 10
       echo "Checking [The EpicBook!](http://$(vmPublicIp))"
       curl -s -I http://$(vmPublicIp) | grep "200 OK"
     displayName: 'Final Health Check'
