@@ -42,6 +42,7 @@ steps:
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)"
+        -u azureuser --become
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
