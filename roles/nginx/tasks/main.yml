@@ -5,7 +5,7 @@
     state: present
     update_cache: yes
 
-- name: Remove default Nginx configurations
+- name: Force remove default configurations
   file:
     path: "{{ item }}"
     state: absent
@@ -13,27 +13,25 @@
     - /etc/nginx/sites-enabled/default
     - /etc/nginx/sites-available/default
 
-- name: Deploy EpicBook configuration to sites-available
+- name: Copy EpicBook config to sites-available
   template:
     src: theepicbooks.conf.j2
     dest: /etc/nginx/sites-available/epicbook
     mode: '0644'
-  notify: restart nginx
 
-- name: Enable EpicBook site by creating symlink
+- name: Enable EpicBook config via symlink
   file:
     src: /etc/nginx/sites-available/epicbook
     dest: /etc/nginx/sites-enabled/epicbook
     state: link
-  notify: restart nginx
 
-- name: Test Nginx configuration
+- name: Test Nginx syntax
   command: nginx -t
   register: nginx_test
   changed_when: false
 
-- name: Ensure Nginx is started and enabled
+- name: Restart Nginx to apply changes
   service:
     name: nginx
-    state: started
+    state: restarted
     enabled: yes

@@ -1,6 +1,6 @@
 server {
-    listen 80 default_server; # Adding 'default_server' makes this the boss
-    server_name _;            # Catch-all server name
+    listen 80 default_server;
+    server_name _;
 
     location / {
         proxy_pass http://localhost:{{ app_port }};
