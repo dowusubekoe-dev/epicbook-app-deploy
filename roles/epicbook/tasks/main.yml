@@ -1,9 +1,101 @@
-- name: Start App with PM2
+---
+- name: Ensure application directory exists
+  file:
+    path: "{{ app_dest }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0755"
+  become: true
+
+- name: Add safe directory for git
+  command: "git config --global --add safe.directory {{ app_dest }}"
+  become: true
+  become_user: "{{ app_user }}"
+
+- name: Clone EpicBook repo
+  git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_dest }}"
+    version: main
+    force: yes
+  become: true
+  become_user: "{{ app_user }}"
+  notify: restart application
+
+- name: Install MySQL client and Python dependencies
+  apt:
+    name:
+      - mysql-client
+      - python3-mysqldb
+      - python3-pymysql
+    state: present
+  become: true
+
+- name: Check if database is already seeded
   shell: |
-    pm2 delete epicbook || true
-    PORT={{ app_port }} pm2 start server.js --name "epicbook"
+    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
+    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" --skip-column-names
+  register: table_count
+  changed_when: false
+  become: true
+
+- name: Run database schema and seeds
+  shell: "mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/{{ item }}"
+  loop:
+    - BuyTheBook_Schema.sql
+    - author_seed.sql
+    - books_seed.sql
+  when: table_count.stdout | trim == "0"
+  become: true
+
+- name: Create .env file from variables
+  copy:
+    dest: "{{ app_dest }}/.env"
+    content: |
+      PORT={{ app_port }}
+      DB_HOST={{ db_host }}
+      DB_USER={{ db_user }}
+      DB_PASSWORD={{ db_password }}
+      DB_NAME={{ db_name }}
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: "0640"
+  become: true
+
+- name: Clean install npm dependencies
+  npm:
+    path: "{{ app_dest }}"
+    state: present
+  become: true
+  become_user: "{{ app_user }}"
+  environment:
+    PM2_HOME: "{{ pm2_home }}"
+
+- name: Check PM2 process state
+  command: "pm2 describe {{ nginx_site_name }}"
+  register: pm2_process
+  failed_when: false
+  changed_when: false
+  become: true
+  become_user: "{{ app_user }}"
+  environment:
+    PM2_HOME: "{{ pm2_home }}"
+
+- name: Start app with pm2
+  command: "pm2 start server.js --name {{ nginx_site_name }} --update-env"
   args:
     chdir: "{{ app_dest }}"
+  when: pm2_process.rc != 0
+  become: true
+  become_user: "{{ app_user }}"
+  environment:
+    PORT: "{{ app_port }}"
+    PM2_HOME: "{{ pm2_home }}"
+
+- name: Configure pm2 to start on boot
+  command: "pm2 save"
+  become: true
   become_user: "{{ app_user }}"
   environment:
     PM2_HOME: "{{ pm2_home }}"

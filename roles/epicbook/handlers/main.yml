@@ -1,14 +1,24 @@
 ---
 - name: restart epicbook
-  command: pm2 restart epicbook --update-env
+  command: "pm2 restart {{ nginx_site_name }}"
   args:
     chdir: "{{ app_dest }}"
   become: true
   become_user: "{{ app_user }}"
   environment:
     PM2_HOME: "{{ pm2_home }}"
+  listen: "restart application"
 
-- name: restart mysql
+- name: reload nginx
   service:
-    name: mysql
+    name: nginx
+    state: reloaded
+  become: true
+  listen: "reload webserver"
+
+- name: restart nginx
+  service:
+    name: nginx
     state: restarted
+  become: true
+  listen: "restart webserver"

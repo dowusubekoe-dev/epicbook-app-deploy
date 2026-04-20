@@ -1,43 +1,135 @@
 ---
-- name: Update apt cache and upgrade all packages
+- name: Ensure Ansible remote tmp directory exists
+  file:
+    path: /tmp/ansible-tmp
+    state: directory
+    mode: '0777'
+  become: true
+
+- name: Update apt cache
   apt:
     update_cache: yes
-    upgrade: dist
     cache_valid_time: 3600
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Remove conflicting nodejs/npm packages before setup
+  apt:
+    name:
+      - nodejs
+      - npm
+      - node-gyp
+      - node-cacache
+      - node-mkdirp
+      - node-nopt
+      - node-tar
+      - node-which
+      - libnode-dev
+      - libnode72
+    state: absent
+    purge: yes
+  ignore_errors: true
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Fix broken package dependencies
+  command: /usr/bin/apt-get install -f -y
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
+
+- name: Autoremove leftover packages
+  command: /usr/bin/apt-get autoremove -y
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
 - name: Install baseline packages
   apt:
     name:
-      - nginx
       - git
       - curl
+      - unzip
+      - software-properties-common
+      - acl
+      - python3-mysqldb
       - python3-pymysql
     state: present
-    update_cache: yes
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
-- name: Install baseline dependencies
-  apt:
-    name:
-      - git
-      - curl
-      - wget
-      - net-tools
-      - python3-pip
-      - python3-pymysql  # CRITICAL: Allows Ansible to talk to MySQL
-    state: present
-
-- name: Add NodeSource repository for Node.js 20.x
-  shell: |
-    curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+- name: Add NodeSource repository for Node.js 20
+  shell: curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
   args:
     creates: /etc/apt/sources.list.d/nodesource.list
+    executable: /bin/bash
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
 - name: Install Node.js
   apt:
-    name: nodejs
+    name:
+      - nodejs
     state: present
+    update_cache: yes
+  become: true
+  environment:
+    DEBIAN_FRONTEND: noninteractive
 
-- name: Ensure Git is at the latest version
-  apt:
-    name: git
-    state: latest
+- name: Verify Node.js and npm versions
+  command: "{{ item }}"
+  loop:
+    - node --version
+    - npm --version
+  register: node_version
+  changed_when: false
+
+- name: Ensure www-data home directory exists
+  file:
+    path: /var/www
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  become: true
+
+- name: Ensure www-data ansible tmp directory exists
+  file:
+    path: "/var/www/.ansible/tmp"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+    recurse: yes
+  become: true
+
+- name: Ensure pm2 home directory exists
+  file:
+    path: "{{ pm2_home }}"
+    state: directory
+    owner: "{{ app_user }}"
+    group: "{{ app_group }}"
+    mode: '0755'
+  become: true
+
+- name: Disable root SSH login
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PermitRootLogin'
+    line: 'PermitRootLogin no'
+    state: present
+  become: true
+  notify: restart ssh
+
+- name: Disable password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+    state: present
+  become: true
+  notify: restart ssh
