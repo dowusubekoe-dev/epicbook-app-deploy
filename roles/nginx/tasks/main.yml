@@ -3,31 +3,30 @@
   apt:
     name: nginx
     state: present
+    update_cache: yes
 
-- name: Start and enable Nginx service
-  service:
-    name: nginx
-    state: started
-    enabled: yes
-
-- name: Remove default Nginx site configuration
+- name: Remove default Nginx site to avoid conflicts
   file:
-    path: /etc/nginx/sites-enabled/default
+    path: "{{ item }}"
     state: absent
+  loop:
+    - /etc/nginx/sites-enabled/default
+    - /etc/nginx/sites-available/default
   notify: restart nginx
 
 - name: Deploy EpicBook reverse proxy configuration
   template:
     src: theepicbooks.conf.j2
-    dest: "/etc/nginx/conf.d/{{ nginx_site_name }}.conf"
-  notify: reload nginx
+    dest: "/etc/nginx/sites-enabled/{{ nginx_site_name }}"
+  notify: restart nginx
 
 - name: Test Nginx configuration syntax
   command: nginx -t
   register: nginx_test
   changed_when: false
 
-- name: Ensure Nginx is running and reloaded
+- name: Ensure Nginx is started and enabled
   service:
     name: nginx
     state: started
+    enabled: yes
