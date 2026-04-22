@@ -82,10 +82,9 @@
     PM2_HOME: "{{ pm2_home }}"
 
 - name: Start app with pm2
-  command: "pm2 start server.js --name {{ nginx_site_name }} --update-env"
+  command: pm2 start server.js --name {{ nginx_site_name }} --update-env
   args:
     chdir: "{{ app_dest }}"
-  when: pm2_process.rc != 0
   become: true
   become_user: "{{ app_user }}"
   environment:
