@@ -80,7 +80,7 @@
     PM2_HOME: "{{ pm2_home }}"
 
 - name: Check PM2 process state
-  command: "pm2 describe {{ nginx_site_name }}"
+  command: /usr/bin/pm2 describe {{ nginx_site_name }}
   register: pm2_process
   failed_when: false
   changed_when: false
@@ -90,17 +90,18 @@
     PM2_HOME: "{{ pm2_home }}"
 
 - name: Start app with pm2
-  command: /usr/local/bin/pm2 start server.js ... --name {{ nginx_site_name }} --update-env
+  command: /usr/local/bin/pm2 start server.js --name {{ nginx_site_name }} --update-env
   args:
     chdir: "{{ app_dest }}"
   become: true
   become_user: "{{ app_user }}"
   environment:
+    PATH: "/usr/bin:/usr/local/bin:/bin"
     PORT: "{{ app_port }}"
     PM2_HOME: "{{ pm2_home }}"
 
-- name: Configure pm2 to start on boot
-  command: "pm2 save"
+- name: Save PM2 process list
+  command: /usr/bin/pm2 save
   become: true
   become_user: "{{ app_user }}"
   environment:
