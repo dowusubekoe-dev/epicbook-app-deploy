@@ -42,26 +42,22 @@ steps:
       chmod 600 $(sshKey.secureFilePath)
       export ANSIBLE_PRIVATE_KEY_FILE=$(sshKey.secureFilePath)
 
-        ansible-playbook -i inventory.ini site.yml \
+      ansible-playbook -i inventory.ini site.yml \
         --private-key="$(sshKey.secureFilePath)" \
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
-        -e "db_user=$DB_USER" \
-        -e "db_password=$DB_PASSWORD" \
-        -u azureuser --become \
-        -vvv
+        -u azureuser --become -vvv
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
-      DB_PASSWORD: $(db_password)
       DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
-
+      DB_PASSWORD: $(db_password)
 
   # VERIFY
   - script: |
-      echo "DB_USER=$DB_USER"
-      echo "Password length = ${#DB_PASSWORD}"
-    displayName: 'Debug Env Variables'
+      echo "DB_USER set: $(test -n "$DB_USER" && echo YES || echo NO)"
+      echo "DB_PASSWORD length: ${#DB_PASSWORD}"
+    displayName: 'Debug Env Variables (Safe)'
     env:
       DB_PASSWORD: $(db_password)
       DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
@@ -69,8 +65,17 @@ steps:
 
   # VERIFY
   - script: |
-      echo "Waiting for Nginx and PM2 to settle..."
-      sleep 20
-      echo "Testing connection to http://$(vmPublicIp)"
-      curl -f -I http://$(vmPublicIp)
+      echo "Waiting for application to become healthy..."
+
+      for i in {1..10}; do
+        if curl -sf http://$(vmPublicIp) > /dev/null; then
+          echo "App is up"
+          exit 0
+        fi
+        echo "Not ready yet... retrying ($i)"
+        sleep 5
+      done
+
+      echo "App failed to become healthy"
+      exit 1
     displayName: 'Final Health Check'
