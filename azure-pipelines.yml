@@ -39,13 +39,14 @@ steps:
   # RUN DEPLOYMENT
   - script: |
       chmod 600 $(sshKey.secureFilePath)
-
+      export ANSIBLE_PRIVATE_KEY_FILE=$(sshKey.secureFilePath)
       ansible-playbook -i inventory.ini site.yml \
-        --private-key $(sshKey.secureFilePath) \
+        --private-key="$(sshKey.secureFilePath)" \
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
         -e "db_password=$(db_password)" \
-        -u azureuser --become
+        -u azureuser --become \
+        -vvv
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
