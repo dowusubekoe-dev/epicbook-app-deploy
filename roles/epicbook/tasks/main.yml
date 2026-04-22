@@ -23,22 +23,21 @@
   become_user: "{{ app_user }}"
   notify: restart application
 
-- name: Install MySQL client and Python dependencies
-  apt:
-    name:
-      - mysql-client
-      - python3-mysqldb
-      - python3-pymysql
-    state: present
-  become: true
+- name: Debug DB variables
+  debug:
+    msg:
+      - "db_user = {{ db_user | default('NOT SET') }}"
+      - "db_password length = {{ lookup('env','DB_PASSWORD') | length }}"
 
 - name: Check if database is already seeded
   shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" --skip-column-names
-  register: table_count
-  changed_when: false
-  become: true
+    mysql -h {{ db_host }} \
+          -u {{ db_user }} \
+          -p"${DB_PASSWORD}" \
+          -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" \
+          --skip-column-names
+  environment:
+    DB_PASSWORD: "{{ lookup('env', 'DB_PASSWORD') }}"
 
 - name: Run database schema and seeds
   shell: "mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/{{ item }}"

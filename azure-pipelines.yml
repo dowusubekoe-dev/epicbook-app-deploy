@@ -41,24 +41,30 @@ steps:
   - script: |
       chmod 600 $(sshKey.secureFilePath)
       export ANSIBLE_PRIVATE_KEY_FILE=$(sshKey.secureFilePath)
-      ansible-playbook -i inventory.ini site.yml \
+
+        ansible-playbook -i inventory.ini site.yml \
         --private-key="$(sshKey.secureFilePath)" \
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
-        -e "db_password=$DB_PASSWORD" \
         -e "db_user=$DB_USER" \
+        -e "db_password=$DB_PASSWORD" \
         -u azureuser --become \
         -vvv
     displayName: 'Execute Role-Based Deployment'
-
-  - script: |
-      echo "Password length = $(db_password)" | wc -c
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
       DB_PASSWORD: $(db_password)
       DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
-    displayName: 'Debug Password Length'
 
+
+  # VERIFY
+  - script: |
+      echo "DB_USER=$DB_USER"
+      echo "Password length = ${#DB_PASSWORD}"
+    displayName: 'Debug Env Variables'
+    env:
+      DB_PASSWORD: $(db_password)
+      DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
 
 
   # VERIFY
