@@ -34,7 +34,7 @@ steps:
     inputs:
       knownHostsEntry: '$(vmPublicIp)'
       sshPublicKey: '$(ssh_public_key)'
-      sshKeySecureFile: 'azure_vm_key'
+      sshKeySecureFile: 'id_rsa'
 
   # 4. RUN DEPLOYMENT (Updated to match group_vars logic)
   - script: |
