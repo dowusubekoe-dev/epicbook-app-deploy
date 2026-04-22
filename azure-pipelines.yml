@@ -45,15 +45,15 @@ steps:
         --private-key="$(sshKey.secureFilePath)" \
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
-        -e "db_password=$(DB_PASSWORD)" \
-        -e "db_user=$(DB_USER)" \
+        -e "db_password=$DB_PASSWORD" \
+        -e "db_user=$DB_USER" \
         -u azureuser --become \
         -vvv
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
       DB_PASSWORD: $(db_password)
-      DB_USER: $(db_user)
+      DB_USER: $(db_admin_user)
 
   # VERIFY
   - script: |
