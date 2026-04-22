@@ -50,10 +50,15 @@ steps:
         -u azureuser --become \
         -vvv
     displayName: 'Execute Role-Based Deployment'
+
+  - script: |
+      echo "Password length = $(db_password)" | wc -c
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
       DB_PASSWORD: $(db_password)
-      DB_USER: "$(db_admin_user)@epicbook-mysql-lkjb4a"
+      DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
+    displayName: 'Debug Password Length'
+
 
 
   # VERIFY
