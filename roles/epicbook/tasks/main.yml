@@ -31,22 +31,22 @@
 
 - name: Check if database is already seeded
   shell: |
-    mysql -h {{ db_host }} \
-          -u {{ db_user }} \
-          -p"${DB_PASSWORD}" \
-          -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" \
-          --skip-column-names
+    mysql -h {{ db_host }} -u {{ db_user }} -p{{ db_password }} \
+    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" \
+    --skip-column-names
+  register: table_count
+  changed_when: false
+  failed_when: false
   environment:
-    DB_PASSWORD: "{{ lookup('env', 'DB_PASSWORD') }}"
+    MYSQL_PWD: "{{ db_password }}"
 
 - name: Run database schema and seeds
-  shell: "mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' {{ db_name }} < {{ app_dest }}/db/{{ item }}"
-  loop:
-    - BuyTheBook_Schema.sql
-    - author_seed.sql
-    - books_seed.sql
-  when: table_count.stdout | trim == "0"
-  become: true
+  shell: |
+    mysql -h {{ db_host }} -u {{ db_user }} -p{{ db_password }} < schema.sql && \
+    mysql -h {{ db_host }} -u {{ db_user }} -p{{ db_password }} < seeds.sql
+  when: (table_count.stdout | default('1') | trim | int) == 0
+  environment:
+    MYSQL_PWD: "{{ db_password }}"
 
 - name: Create .env file from variables
   copy:
