@@ -30,24 +30,27 @@ steps:
     displayName: 'Get Latest Infra Data'
     continueOnError: true
 
-  - task: InstallSSHKey@0
+   # DOWNLOAD PRIVATE KEY FROM SECURE FILES
+  - task: DownloadSecureFile@1
+    name: sshKey
     inputs:
-      knownHostsEntry: '$(vmPublicIp)'
-      sshPublicKey: '$(ssh_public_key)'
-      sshKeySecureFile: 'id_rsa'
+      secureFile: 'id_rsa'
 
-  # 4. RUN DEPLOYMENT (Updated to match group_vars logic)
+  # RUN DEPLOYMENT
   - script: |
+      chmod 600 $(sshKey.secureFilePath)
+
       ansible-playbook -i inventory.ini site.yml \
+        --private-key $(sshKey.secureFilePath) \
         -e "ansible_host=$(vmPublicIp)" \
         -e "db_host=$(db_host)" \
-        -e "db_password=$(db_password)"
+        -e "db_password=$(db_password)" \
         -u azureuser --become
     displayName: 'Execute Role-Based Deployment'
     env:
       ANSIBLE_HOST_KEY_CHECKING: 'False'
 
-  # 5. VERIFY (Wait for Nginx to handle the redirect)
+  # VERIFY
   - script: |
       echo "Waiting for Nginx and PM2 to settle..."
       sleep 20
