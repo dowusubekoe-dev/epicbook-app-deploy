@@ -4,37 +4,37 @@
     name: nginx
     state: present
     update_cache: yes
-  become: true
+  become: yes
 
 - name: Deploy Nginx site config from template
   template:
-    src: epicbook.conf.j2  # Double-check this filename in your templates folder!
-    dest: "/etc/nginx/sites-available/{{ nginx_site_name }}"
+    src: epicbook.conf.j2
+    dest: /etc/nginx/sites-available/{{ nginx_site_name }}
     owner: root
     group: root
     mode: "0644"
-  become: true
-  notify: reload webserver
+  become: yes
+  notify: reload nginx
 
 - name: Enable the site (symlink to sites-enabled)
   file:
-    src: "/etc/nginx/sites-available/{{ nginx_site_name }}"
-    dest: "/etc/nginx/sites-enabled/{{ nginx_site_name }}"
+    src: /etc/nginx/sites-available/{{ nginx_site_name }}
+    dest: /etc/nginx/sites-enabled/{{ nginx_site_name }}
     state: link
     force: yes
-  become: true
-  notify: reload webserver
+  become: yes
+  notify: reload nginx
 
 - name: Remove default Nginx site
   file:
     path: /etc/nginx/sites-enabled/default
     state: absent
-  become: true
-  notify: reload webserver
+  become: yes
+  notify: reload nginx
 
 - name: Ensure Nginx is started and enabled
   service:
     name: nginx
     state: started
     enabled: yes
-  become: true
+  become: yes

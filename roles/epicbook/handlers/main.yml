@@ -1,14 +1,4 @@
 ---
-- name: restart epicbook
-  command: "pm2 restart {{ nginx_site_name }}"
-  args:
-    chdir: "{{ app_dest }}"
-  become: true
-  become_user: "{{ app_user }}"
-  environment:
-    PM2_HOME: "{{ pm2_home }}"
-  listen: "restart application"
-
 - name: reload nginx
   service:
     name: nginx
@@ -16,9 +6,11 @@
   become: true
   listen: "reload webserver"
 
-- name: restart nginx
-  service:
-    name: nginx
-    state: restarted
+- name: restart epicbook app
+  command: pm2 restart epicbook --update-env
+  args:
+    chdir: "{{ app_dest }}"
   become: true
-  listen: "restart webserver"
+  become_user: "{{ app_user }}"
+  environment:
+    PM2_HOME: "{{ pm2_home }}"

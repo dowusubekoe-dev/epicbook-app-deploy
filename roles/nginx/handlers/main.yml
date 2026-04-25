@@ -4,8 +4,3 @@
     name: nginx
     state: reloaded
   become: true
-- name: restart webserver
-  service:
-    name: nginx
-    state: restarted
-  become: true

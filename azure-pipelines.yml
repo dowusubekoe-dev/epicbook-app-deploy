@@ -1,81 +1,65 @@
-trigger: none
-
-resources:
-  pipelines:
-    - pipeline: infra
-      source: infra-epicbook.git
-      trigger: true
-  repositories:
-    - repository: external_assignment
-      type: github
-      name: pravinmishraaws/theepicbook
-      endpoint: dowusubekoe-dev
-
-variables:
-  - group: epicbook-secrets
-  - name: vmPublicIp
-    value: '20.123.200.55'
-  - name: db_host
-    value: 'epicbook-mysql-lkjb4a.mysql.database.azure.com'
-
+trigger:
+  branches:
+    include:
+      - main
 
 pool:
-  name: 'epicbook-deploy-agent'
+  name: epicbook-deploy-agent
 
-steps:
-  - checkout: self
-    displayName: 'Checkout Ansible Playbook'
+stages:
 
-  - download: infra
-    artifact: infra-outputs
-    displayName: 'Get Latest Infra Data'
-    continueOnError: true
+  - stage: Configure
+    displayName: 'Configure and Deploy EpicBook'
+    jobs:
+      - job: AnsibleDeploy
+        displayName: 'Run Ansible Playbook'
+        variables:
+          ANSIBLE_HOST_KEY_CHECKING: 'False'
+        steps:
+          - checkout: self
+            displayName: 'Checkout app repo'
 
-   # DOWNLOAD PRIVATE KEY FROM SECURE FILES
-  - task: DownloadSecureFile@1
-    name: sshKey
-    inputs:
-      secureFile: 'id_rsa'
+          - task: DownloadSecureFile@1
+            displayName: 'Download SSH private key'
+            name: sshKey
+            inputs:
+              secureFile: 'id_rsa'
 
-  # RUN DEPLOYMENT
-  - script: |
-      chmod 600 $(sshKey.secureFilePath)
-      export ANSIBLE_PRIVATE_KEY_FILE=$(sshKey.secureFilePath)
+          - script: |
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq ansible
+              ansible --version
+            displayName: 'Install Ansible'
 
-      ansible-playbook -i inventory.ini site.yml \
-        --private-key="$(sshKey.secureFilePath)" \
-        -e "ansible_host=$(vmPublicIp)" \
-        -e "db_host=$(db_host)" \
-        -u azureuser --become -vvv
-    displayName: 'Execute Role-Based Deployment'
-    env:
-      ANSIBLE_HOST_KEY_CHECKING: 'False'
-      DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
-      DB_PASSWORD: $(db_password)
+          - script: |
+              cp $(sshKey.secureFilePath) /tmp/id_rsa
+              chmod 600 /tmp/id_rsa
+              echo "SSH key ready"
+            displayName: 'Set up SSH key'
 
-  # VERIFY
-  - script: |
-      echo "DB_USER set: $(test -n "$DB_USER" && echo YES || echo NO)"
-      echo "DB_PASSWORD length: ${#DB_PASSWORD}"
-    displayName: 'Debug Env Variables (Safe)'
-    env:
-      DB_PASSWORD: $(db_password)
-      DB_USER: $(db_admin_user)@epicbook-mysql-lkjb4a
+          - script: |
+              echo "Inventory:"
+              cat inventory.ini
+              echo "Group vars:"
+              cat group_vars/web/main.yml
+            displayName: 'Verify inventory and variables'
+            workingDirectory: $(System.DefaultWorkingDirectory)
 
+          - script: |
+              ansible all -i inventory.ini -m ping \
+                --private-key /tmp/id_rsa
+            displayName: 'Test Ansible connectivity'
+            workingDirectory: $(System.DefaultWorkingDirectory)
 
-  # VERIFY
-  - script: |
-      echo "Waiting for application to become healthy..."
+          - script: |
+              ansible-playbook -i inventory.ini site.yml -v \
+                --private-key /tmp/id_rsa
+            displayName: 'Run Ansible playbook'
+            workingDirectory: $(System.DefaultWorkingDirectory)
 
-      for i in {1..10}; do
-        if curl -sf http://$(vmPublicIp) > /dev/null; then
-          echo "App is up"
-          exit 0
-        fi
-        echo "Not ready yet... retrying ($i)"
-        sleep 5
-      done
-
-      echo "App failed to become healthy"
-      exit 1
-    displayName: 'Final Health Check'
+          - script: |
+              ansible all -i inventory.ini -m shell \
+                -a "curl -s -o /dev/null -w '%{http_code}' http://localhost" \
+                --private-key /tmp/id_rsa
+            displayName: 'Verify Nginx is serving'
+            workingDirectory: $(System.DefaultWorkingDirectory)

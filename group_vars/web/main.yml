@@ -1,10 +1,12 @@
 ---
 app_repo: "https://github.com/pravinmishraaws/theepicbook.git"
 app_dest: "/var/www/epicbook"
-app_user: "azureuser"
-app_group: "azureuser"
+app_user: "www-data"
+app_group: "www-data"
 nginx_site_name: "epicbook"
 app_port: 3000
 db_user: "azuredbadmin"
 db_name: "bookstore"
-pm2_home: "/home/{{ app_user }}/.pm2"
+db_host: "epicbook-mysql-lkjb4a.mysql.database.azure.com"
+db_password: "GuestStrongPassword2026!"
+pm2_home: "/var/www/.pm2"
