@@ -35,13 +35,13 @@
     DEBIAN_FRONTEND: noninteractive
 
 - name: Fix broken package dependencies
-  command: /usr/bin/apt-get install -f -y
+  command: /usr/bin/apt install -f -y
   become: true
   environment:
     DEBIAN_FRONTEND: noninteractive
 
 - name: Autoremove leftover packages
-  command: /usr/bin/apt-get autoremove -y
+  command: /usr/bin/apt autoremove -y
   become: true
   environment:
     DEBIAN_FRONTEND: noninteractive

@@ -232,9 +232,9 @@ sudo rm -f /etc/nginx/conf.d/theepicbooks.conf
 This ensures Ansible actually "installs" the packages rather than just seeing them as already present.
 
 ```bash
-sudo apt-get purge -y nginx mysql-server nodejs
-sudo apt-get autoremove -y
-sudo apt-get clean
+sudo apt purge -y nginx mysql-server nodejs
+sudo apt autoremove -y
+sudo apt clean
 ```
 
 ---

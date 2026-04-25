@@ -26,8 +26,8 @@ stages:
               secureFile: 'id_rsa'
 
           - script: |
-              sudo apt-get update -qq
-              sudo apt-get install -y -qq ansible
+              sudo apt update -qq
+              sudo apt install -y -qq ansible
               ansible --version
             displayName: 'Install Ansible'
 

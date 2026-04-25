@@ -77,15 +77,20 @@
 
 - name: Force seed the bookstore data
   shell: |
-    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
-    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/author_seed.sql
-    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/books_seed.sql
+    mysql bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
+    mysql bookstore < {{ app_dest }}/db/author_seed.sql
+    mysql bookstore < {{ app_dest }}/db/books_seed.sql
   become: yes
   args:
     executable: /bin/bash
   register: seed_output
-  # This ensures the task shows 'changed' in your logs so you know it ran
   changed_when: true
+
+- name: Adapt singular tables to plural for Sequelize compatibility
+  shell: |
+    mysql bookstore -e "RENAME TABLE Author TO Authors, Book TO Books;"
+  become: yes
+  ignore_errors: yes  # Prevents failure if tables are already plural
 
 - name: Fix public directory permissions for Nginx
   file:
@@ -111,27 +116,6 @@
   register: table_count
   changed_when: false
   ignore_errors: true
-
-- name: Run database schema
-  shell: >
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/BuyTheBook_Schema.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
-  become: yes
-
-- name: Run author seed
-  shell: >
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/author_seed.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
-  become: yes
-
-- name: Run books seed
-  shell: >
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}'
-    {{ db_name }} < {{ app_dest }}/db/books_seed.sql
-  when: table_count.stdout | trim == "0" or table_count.failed
-  become: yes
 
 - name: Install app dependencies
   npm:
