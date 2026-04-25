@@ -53,6 +53,10 @@
     enabled: yes
   become: yes
 
+- name: Wait for MySQL to wake up
+  pause:
+    seconds: 10
+
 - name: Create database user and set password
   mysql_user:
     name: "{{ db_user }}"
@@ -73,12 +77,15 @@
 
 - name: Force seed the bookstore data
   shell: |
-    mysql bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
-    mysql bookstore < {{ app_dest }}/db/author_seed.sql
-    mysql bookstore < {{ app_dest }}/db/books_seed.sql
+    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
+    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/author_seed.sql
+    /usr/bin/mysql -u root bookstore < {{ app_dest }}/db/books_seed.sql
   become: yes
-  # This ensures that even if the DB existed, we repopulate the tables
+  args:
+    executable: /bin/bash
   register: seed_output
+  # This ensures the task shows 'changed' in your logs so you know it ran
+  changed_when: true
 
 - name: Fix public directory permissions for Nginx
   file:
