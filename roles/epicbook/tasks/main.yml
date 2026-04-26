@@ -75,17 +75,6 @@
     login_unix_socket: /var/run/mysqld/mysqld.sock
   become: yes
 
-- name: Force seed the bookstore data
-  shell: |
-    mysql bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
-    mysql bookstore < {{ app_dest }}/db/author_seed.sql
-    mysql bookstore < {{ app_dest }}/db/books_seed.sql
-  become: yes
-  args:
-    executable: /bin/bash
-  register: seed_output
-  changed_when: true
-
 - name: Adapt singular tables to plural for Sequelize compatibility
   shell: |
     mysql bookstore -e "RENAME TABLE Author TO Authors, Book TO Books;"
@@ -108,14 +97,23 @@
     enabled: yes
   become: yes
 
-- name: Check if database is already seeded
-  shell: |
-    mysql -h {{ db_host }} -u {{ db_user }} -p'{{ db_password }}' \
-    -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='{{ db_name }}'" \
-    --skip-column-names
-  register: table_count
+- name: Check if Book table is already populated
+  shell: mysql -N -s -e "SELECT COUNT(*) FROM Book;" bookstore
+  register: book_count
+  failed_when: false
   changed_when: false
-  ignore_errors: true
+
+- name: Idempotent Database Re-initialization
+  shell: |
+    mysql -e "DROP DATABASE IF EXISTS bookstore; CREATE DATABASE bookstore;"
+    mysql bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
+    sed '/^USE /d' {{ app_dest }}/db/author_seed.sql | mysql bookstore
+    sed '/^USE /d' {{ app_dest }}/db/books_seed.sql | mysql bookstore
+  become: yes
+  # This makes the task idempotent by telling Ansible it only "changes"
+  # if the database was missing or we explicitly want to refresh it.
+  register: db_setup
+  changed_when: "db_setup.rc == 0"
 
 - name: Install app dependencies
   npm:
