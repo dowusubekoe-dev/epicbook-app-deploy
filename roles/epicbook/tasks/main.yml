@@ -101,8 +101,9 @@
   shell: |
     mysql -e "DROP DATABASE IF EXISTS bookstore; CREATE DATABASE bookstore;"
     mysql bookstore < {{ app_dest }}/db/BuyTheBook_Schema.sql
-    sed 's/INSERT INTO Author/INSERT INTO Authors/g' {{ app_dest }}/db/author_seed.sql | mysql bookstore
-    sed 's/INSERT INTO Book/INSERT INTO Books/g; /^USE /d' {{ app_dest }}/db/books_seed.sql | mysql bookstore
+    mysql bookstore -e "RENAME TABLE Authors TO Author, Books TO Book;"
+    sed '/^USE /d' {{ app_dest }}/db/author_seed.sql | mysql bookstore
+    sed '/^USE /d' {{ app_dest }}/db/books_seed.sql | mysql bookstore
   become: yes
   # This makes the task idempotent by telling Ansible it only "changes"
   # if the database was missing or we explicitly want to refresh it.
