@@ -75,12 +75,6 @@
     login_unix_socket: /var/run/mysqld/mysqld.sock
   become: yes
 
-- name: Adapt singular tables to plural for Sequelize compatibility
-  shell: |
-    mysql bookstore -e "RENAME TABLE Author TO Authors, Book TO Books;"
-  become: yes
-  ignore_errors: yes  # Prevents failure if tables are already plural
-
 - name: Fix public directory permissions for Nginx
   file:
     path: "{{ app_dest }}/public"
